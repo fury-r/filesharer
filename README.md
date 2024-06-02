@@ -63,6 +63,7 @@ The FileShare Web Application is a platform built to facilitate easy sharing of 
 - Add support for user-defined expiry times for shared files.
 - Enhance the user interface for better user experience.
 - Implement real-time notifications for file uploads and downloads.
+- File Preview
 
 ## Contributors
 - Rajeev Dessai - Full Stack Developer
