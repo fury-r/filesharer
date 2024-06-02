@@ -50,6 +50,15 @@ The FileShare Web Application is a platform built to facilitate easy sharing of 
 3. **QR code detection:**
    - Backend detects QR code in a  given image.
 
+## Screenshots
+![IMG-20240602-WA0015](https://github.com/fury-r/filesharer/assets/79844581/3ff55e35-e815-430d-9a0a-cefda1f6b70d)
+![IMG-20240602-WA0019](https://github.com/fury-r/filesharer/assets/79844581/62c1d41b-36ce-4042-9d54-48837b24b309)
+![IMG-20240602-WA0018](https://github.com/fury-r/filesharer/assets/79844581/152e1d8d-5cee-4a86-83de-6d364addfaad)
+![IMG-20240602-WA0017](https://github.com/fury-r/filesharer/assets/79844581/cab8bc9d-24ee-48db-b77b-0ee926a9339c)
+![IMG-20240602-WA0021](https://github.com/fury-r/filesharer/assets/79844581/f6716fd0-e5c4-4c43-b881-7761de3ea482)
+![IMG-20240602-WA0020](https://github.com/fury-r/filesharer/assets/79844581/c4c06194-05e8-4f94-bce3-1d100211c5b1)
+![IMG-20240602-WA0016](https://github.com/fury-r/filesharer/assets/79844581/3cfea9ee-98c1-4715-878e-d9238cd8d20b)
+
 ## Future Improvements
 - Implement additional security measures such as encryption for file uploads.
 - Add support for user-defined expiry times for shared files.
