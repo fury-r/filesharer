@@ -1,0 +1,22 @@
+version: "3.7"
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: ./app/Dockerfile
+    container_name: frontend
+    restart: always
+    image: frontend:v1
+    environment:
+      VITE_API_ENDPOINT: http://backend:8000
+    ports:
+      - 5173:5173
+  backend:
+    build:
+      context: .
+      dockerfile: ./backend/Dockerfile
+    container_name: frontend
+    restart: always
+    image: backend:v1
+    ports:
+      - 8000:8000

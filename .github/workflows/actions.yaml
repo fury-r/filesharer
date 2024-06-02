@@ -1,0 +1,35 @@
+name: File Sharer
+
+on:
+  push:
+    branches: ["master"]
+  pull_request:
+    branches: ["master"]
+
+jobs:
+  run-lint-app:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: ["18.x"]
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v2
+      - name: Go to app
+        run: cd app
+        shell: bash
+      - name: npm clean install
+        run: npm ci
+        shell: bash
+        working-directory: ./app
+      - name: Cache npm dependencies
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.npm
+            ./node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+      - name: Run linter
+        run: npm run lint
+        shell: bash
+        working-directory: ./app
