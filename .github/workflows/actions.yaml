@@ -19,7 +19,7 @@ jobs:
         run: cd app
         shell: bash
       - name: npm clean install
-        run: npm ci
+        run: npm ci --legacy-peer-deps
         shell: bash
         working-directory: ./app
       - name: Cache npm dependencies
