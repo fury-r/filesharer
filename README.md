@@ -30,7 +30,7 @@ The FileShare Web Application is a platform built to facilitate easy sharing of 
    - Install dependencies: `pip install -r requirements.txt`
    - Run migrations: `python manage.py makemigrations`
    - Run migrations: `python manage.py migrate`
-   - Start the backend server: `python manage.py runserver`
+   - Start the backend server: `daphne -p 8001 mysite.asgi:application`
 
 2. **Frontend Setup:**
    - Navigate to the frontend directory: `cd frontend`
