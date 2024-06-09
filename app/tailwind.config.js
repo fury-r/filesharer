@@ -2,10 +2,13 @@
 export default {
   content: [
     // Or if using `src` directory:
-    "./src/**/*.{js,ts,jsx,tsx}",
+    './src/**/*.{js,ts,jsx,tsx}'
   ],
   theme: {
-    extend: {},
+    extend: {}
   },
-  plugins: [require("daisyui"), require("@tailwindcss/typography")],
+  plugins: [require('daisyui'), require('@tailwindcss/typography')],
+  daisyui: {
+    themes: ['light', 'dark', 'cupcake']
+  }
 };

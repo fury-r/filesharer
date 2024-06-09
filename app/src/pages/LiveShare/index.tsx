@@ -1,140 +1,47 @@
-import { ChangeEvent, useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef } from 'react';
 import MultiFileUpload from '../../components/MultiFileUpload';
-import { TScanQRResponse, TUploadFileResponse } from '../../types/Response';
 import { UploadInput } from '../../components/UploadInput';
-import { useService } from '../../api/service/useService';
 import { FileTable, QRCode } from '../../components';
 import { downloadFile, isMobile } from '../../utils';
 import { BASE_URL } from '../../api/axios';
-import { toast } from 'react-toastify';
+import ChatBox from '../../components/ChatBox';
+import { useLiveShare } from './hooks/useLiveShare';
 
 const LiveShare = () => {
-  const [files, setFiles] = useState<File[]>([]);
   const inputRef = useRef(null);
-  const { generateLiveShareSession, uploadQRToServer, uploadFilesInSession, deleteFiles } = useService();
-  const [session, setSession] = useState<TUploadFileResponse | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [qrResponse, setQRResponse] = useState<TScanQRResponse | null>(null);
-  const [selected, setSelected] = useState<number[]>([]);
-  const [userCount, setUserCount] = useState(0);
+  const {
+    chats,
+    loading,
+    progress,
+    qrResponse,
+    session,
+    socketconnect,
+    userCount,
+    uuid,
+    files,
+    selected,
+    handleQRInput,
+    handleCreateSession,
+    handleUpload,
+    setSession,
+    setSelected,
+    handleDelete
+  } = useLiveShare();
 
   const mobileView = isMobile();
-  const [progress, setProgress] = useState<number>(0);
   const qrInputRef = useRef(null);
   const scanQrInputRef = useRef(null);
 
-  const handleQRInput = useCallback(
-    async (e: ChangeEvent<HTMLInputElement>) => {
-      setLoading(true);
-      const files = e.target.files;
-      if (files && files?.length > 0) {
-        if (session) {
-          setSession(null);
-          setFiles([]);
-        }
-        const res = await uploadQRToServer(files[0]);
-
-        if (res) {
-          setQRResponse(res);
-          const reader = new FileReader();
-          reader.readAsDataURL(files[0]);
-          reader.onload = () => {
-            setSession({
-              hash: res.upload_details.hash,
-              qr: (reader.result as string).split(',')[1],
-              files: res.files
-            });
-          };
-        }
-      }
-      setLoading(false);
+  const onSend = useCallback(
+    (message: string) => {
+      socketconnect?.send(JSON.stringify({ uuid, message, session_hash: session?.hash }));
     },
-    [session, uploadQRToServer]
+    [session?.hash, socketconnect, uuid]
   );
-  const handleCreateSession = useCallback(async () => {
-    setLoading(true);
-    const response = await generateLiveShareSession();
-    if (response) setSession(response);
-    setLoading(false);
-    toast.success('Session Created');
-  }, [generateLiveShareSession]);
-
-  const handleDelete = useCallback(async () => {
-    if (qrResponse) {
-      await deleteFiles(qrResponse.upload_details.hash, selected.length === qrResponse.files.length ? '' : selected.join(',')).then(() => {
-        toast.success('File Deleted ');
-        setSession((prev) => {
-          //@ts-ignore
-          prev!.files! = prev?.files.filter(({ id }) => !selected.includes(id));
-          if (prev?.files!.length === 0) {
-            setQRResponse(null);
-          }
-          return prev;
-        });
-      });
-    }
-  }, [deleteFiles, qrResponse, selected]);
-
-  const handleUpload = useCallback(
-    async (files: File[]) => {
-      console.log('called');
-      if (files.length > 0) {
-        const res = await uploadFilesInSession(files, session!.hash!, {
-          onUploadProgress: (progressEvent: any) => {
-            console.log(progressEvent);
-            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-            setProgress(percentCompleted);
-          }
-        });
-        if (res) {
-          setFiles([]);
-        }
-      }
-    },
-    [session, uploadFilesInSession]
-  );
-
-  useEffect(() => {
-    if (session?.hash) {
-      const sockets = new WebSocket(`ws://${import.meta.env.VITE_API_ENDPOINT || 'localhost:8001'}/ws/file/${session.hash}/`);
-      sockets.onmessage = (e) => {
-        console.log(e);
-        const data = JSON.parse(e.data);
-        if (data?.files) {
-          toast.success('New file added');
-
-          setSession((prev) => ({
-            ...(prev as TUploadFileResponse),
-            files: data.files
-          }));
-        }
-        if (data?.count) {
-          toast.success('New User Joined');
-
-          setUserCount(data?.count);
-        }
-      };
-      sockets.onopen = (e) => {
-        console.log(e);
-      };
-    }
-  }, [session]);
-
-  useEffect(() => {
-    if (progress === 100) {
-      const interval = setInterval(() => {
-        if (interval) {
-          setProgress(0);
-          clearInterval(interval);
-          toast.success('File Uploaded');
-        }
-      }, 2000);
-    }
-  }, [progress]);
 
   return !session?.qr && !qrResponse?.upload_details.hash ? (
     <div className="flex justify-center items-center h-4/6">
-      <button className="btn btn-outline     m-3" onClick={handleCreateSession} disabled={loading}>
+      <button className="btn btn-outline m-3" onClick={handleCreateSession} disabled={loading}>
         Create Session
       </button>
       <button
@@ -152,6 +59,7 @@ const LiveShare = () => {
       >
         Upload QR to join Session
       </button>
+
       <UploadInput handleQRInput={handleQRInput} qrInputRef={qrInputRef} scanQrInputRef={scanQrInputRef} />
     </div>
   ) : (
@@ -201,6 +109,7 @@ const LiveShare = () => {
           </div>
         </div>
       )}
+      {session?.hash && <ChatBox chats={chats} onSend={onSend} sessionHash={session.hash} />}
     </div>
   );
 };

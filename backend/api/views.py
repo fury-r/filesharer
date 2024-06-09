@@ -1,6 +1,8 @@
 import base64
 from io import BytesIO
 from django.shortcuts import render
+
+from api import PATH
 from .utils import generate_qr_code, generate_random_hash, verify_qr_code
 from rest_framework import generics,status
 from rest_framework.response import Response
@@ -20,7 +22,6 @@ from django.http import HttpResponse,FileResponse
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 # Create your views here.
-PATH=os.getcwd()+"/store"
 
 class BlogPostListCreate(generics.ListCreateAPIView):
     queryset=BlogPost.objects.all()
@@ -126,7 +127,6 @@ class QRValidationView(APIView):
         
 
 def download_file(request,hash_id,file_id=None):
-    print("---------------download")
     if file_id:
         split_files=file_id.split(',')
         files=FilesSerialzer(File.objects.select_related("upload").filter(id__in=split_files),many=True).data

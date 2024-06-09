@@ -17,7 +17,7 @@ export const QRCode = ({
       <label className="mr-2 my-2  whitespace-break-spaces text-ellipsis w-full">QR code with hash</label>
       <MdCancel onClick={() => setFileUploadResponse(null)} />
     </div>
-    <input className="my-2" type="text" value={fileUploadResponse.hash} readOnly />
+    <h4 className="my-2 text-ellipsis whitespace-nowrap overflow-hidden w-1/2">{fileUploadResponse.hash} </h4>
     <img
       src={`data:image/png;base64,${fileUploadResponse.qr}`}
       className={`${isMobile ? ' w-1/2' : 'w-1/3'} my-2`}
