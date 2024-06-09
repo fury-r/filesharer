@@ -1,18 +1,16 @@
-import axios, { InternalAxiosRequestConfig } from "axios";
+import axios, { InternalAxiosRequestConfig } from 'axios';
 
-export const BASE_URL =
-  import.meta.env.REACT_APP_API_ENDPOINT || "http://192.168.0.101:8000";
-
+export const BASE_URL = `http://${import.meta.env.VITE_API_ENDPOINT || 'localhost:8001'}`;
 const axiosInstance = axios.create({
-  baseURL: BASE_URL,
+  baseURL: BASE_URL
 });
 
 axiosInstance.interceptors.request.use(
   async (config: InternalAxiosRequestConfig<any>) => {
     // eslint-disable-next-line no-constant-condition
-    if (["put", "delete", "post", "get"]) {
+    if (['put', 'delete', 'post', 'get']) {
       try {
-        config.headers["Access-Control-Allow-Origin"] = "*";
+        config.headers['Access-Control-Allow-Origin'] = '*';
       } catch (e) {
         console.log(e);
       }

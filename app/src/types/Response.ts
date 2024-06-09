@@ -1,8 +1,3 @@
-export type TUploadFileResponse = {
-  qr: string;
-  hash: string;
-};
-
 export type TUpload = {
   hash: string;
   published_date: string;
@@ -17,8 +12,17 @@ export type TFile = {
   content_type: string;
   id: number;
 };
-
+export type TUploadFileResponse = {
+  qr: string;
+  hash: string;
+  files?: TFile[];
+};
 export type TScanQRResponse = {
   upload_details: TUpload;
+  files: TFile[];
+};
+
+export type TSessionFileUploadResponse = {
+  msg_id: string;
   files: TFile[];
 };

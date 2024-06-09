@@ -6,8 +6,12 @@ import base64
 from io import BytesIO
 import cv2
 from qreader import QReader
-
+import hashlib
+import random
+import string
 import numpy as np
+
+
 def generate_qr_code(data):
     qr = qrcode.QRCode(
         version=1,
@@ -43,3 +47,15 @@ def verify_qr_code(img):
         return decoded_objects[0]
     else:
         return "QR code could not be decoded"
+    
+
+def generate_random_hash():
+    random_string = ''.join(random.choices(string.ascii_letters + string.digits, k=32))
+    
+    hash_object = hashlib.sha256()
+    
+    hash_object.update(random_string.encode('utf-8'))
+    
+    random_hash = hash_object.hexdigest()
+    
+    return random_hash

@@ -30,7 +30,7 @@ The FileShare Web Application is a platform built to facilitate easy sharing of 
    - Install dependencies: `pip install -r requirements.txt`
    - Run migrations: `python manage.py makemigrations`
    - Run migrations: `python manage.py migrate`
-   - Start the backend server: `python manage.py runserver`
+   - Start the backend server: `daphne -p 8001 mysite.asgi:application`
 
 2. **Frontend Setup:**
    - Navigate to the frontend directory: `cd frontend`
@@ -50,6 +50,14 @@ The FileShare Web Application is a platform built to facilitate easy sharing of 
 3. **QR code detection:**
    - Backend detects QR code in a  given image.
 
+
+## Architecture
+
+![FileSharer drawio](https://github.com/fury-r/filesharer/assets/79844581/5c4432c4-07b3-4195-99ee-b267c48efc4a)
+
+![FileSharSql drawio](https://github.com/fury-r/filesharer/assets/79844581/af1d6881-ca1f-4e6e-a825-04ed2c630d0d)
+
+
 ## Screenshots
 ![IMG-20240602-WA0018](https://github.com/fury-r/filesharer/assets/79844581/8c1cfb33-0551-497b-bf8e-59acc12f0586)
 ![IMG-20240602-WA0017](https://github.com/fury-r/filesharer/assets/79844581/fc49c4ca-3f4c-4daa-ad28-d2fd3fd0694e)
@@ -57,6 +65,9 @@ The FileShare Web Application is a platform built to facilitate easy sharing of 
 ![IMG-20240602-WA0016](https://github.com/fury-r/filesharer/assets/79844581/ab066241-7a4e-4e4e-99dc-8d13da15b487)
 ![IMG-20240602-WA0015](https://github.com/fury-r/filesharer/assets/79844581/a775e1c0-46fe-4559-ac7e-6f90b40d5f23)
 ![IMG-20240602-WA0019](https://github.com/fury-r/filesharer/assets/79844581/75062c90-ec19-4e22-a59b-a80ec6ab3447)
+![Screenshot 2024-06-09 124342](https://github.com/fury-r/filesharer/assets/79844581/b416e451-5ee9-453a-aa2f-accc2f4f4606)
+![Screenshot 2024-06-09 124540](https://github.com/fury-r/filesharer/assets/79844581/946d5801-cfdb-4c95-b1c5-35146e3be50d)
+![Screenshot 2024-06-09 124838](https://github.com/fury-r/filesharer/assets/79844581/4571fe43-07cc-4212-99f9-b885d0a001c3)
 
 ## Future Improvements
 - Implement additional security measures such as encryption for file uploads.

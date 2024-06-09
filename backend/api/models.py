@@ -12,7 +12,7 @@ class BlogPost(models.Model):
 
 class Upload(models.Model):
     hash=models.CharField(max_length=999)
-    total_files=models.IntegerField(max_length=99)
+    total_files=models.IntegerField()
     published_date=models.DateTimeField(auto_now_add=True)
 
 
@@ -23,3 +23,4 @@ class File(models.Model):
     content_type=models.CharField(max_length=99)
 
     size=models.CharField(max_length=999)
+    published_date=models.DateTimeField(auto_now_add=True)

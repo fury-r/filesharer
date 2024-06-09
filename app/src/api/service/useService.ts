@@ -1,4 +1,4 @@
-import { TScanQRResponse, TUploadFileResponse } from '../../types/Response';
+import { TScanQRResponse, TSessionFileUploadResponse, TUploadFileResponse } from '../../types/Response';
 import axiosInstance from '../axios';
 
 export const useService = () => {
@@ -55,9 +55,42 @@ export const useService = () => {
     }
   };
 
+  const generateLiveShareSession = async (): Promise<TUploadFileResponse | void> => {
+    try {
+      const response = await axiosInstance.get('/v1/file/live/session');
+      return response.data as TUploadFileResponse;
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const uploadFilesInSession = async (
+    files: File[],
+    hash: string,
+    callbackFunctions?: object
+  ): Promise<TSessionFileUploadResponse | undefined> => {
+    const data = new FormData();
+    files.forEach((value) => {
+      data.append(value.name, value);
+    });
+    try {
+      const response = await axiosInstance.post(`/v1/file/live/session/${hash}/`, data, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        },
+        ...callbackFunctions
+      });
+      return response.data as TSessionFileUploadResponse;
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   return {
     uploadFileToServer,
     uploadQRToServer,
-    deleteFiles
+    deleteFiles,
+    generateLiveShareSession,
+    uploadFilesInSession
   };
 };

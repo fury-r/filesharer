@@ -1,7 +1,9 @@
 import base64
 from io import BytesIO
 from django.shortcuts import render
-from .utils import generate_qr_code, verify_qr_code
+
+from api import PATH
+from .utils import generate_qr_code, generate_random_hash, verify_qr_code
 from rest_framework import generics,status
 from rest_framework.response import Response
 from .models import BlogPost,Upload, File
@@ -16,9 +18,11 @@ from django.core.files.storage import FileSystemStorage
 from django.core.files.uploadhandler import FileUploadHandler
 from PIL import Image
 import zipfile
-from django.http import HttpResponse
+from django.http import HttpResponse,FileResponse
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
 # Create your views here.
-PATH=os.getcwd()+"/store"
+
 class BlogPostListCreate(generics.ListCreateAPIView):
     queryset=BlogPost.objects.all()
     serializer_class=BlogPostSerializer
@@ -80,11 +84,12 @@ class FileUploadView(APIView):
             print(file.name)
         
         qr=generate_qr_code(hash_s)
-            
+        files=FilesSerialzer(File.objects.select_related("upload").filter(upload_id__id=upload_data.id),many=True).data
 
         return Response({
             "qr":qr,
-            "hash":hash_s
+            "hash":hash_s,
+            "files":files
         },status=status.HTTP_200_OK)
 
 
@@ -96,7 +101,7 @@ class QRValidationView(APIView):
         qr.save(buffered,format="PNG")
         buffered.seek(0)        
         qr_hash=verify_qr_code(qr)
-        print(qr_hash)
+        print("hash",qr_hash)
         if not qr_hash: 
             return Response({
                 "message":"Invalid QR"
@@ -109,10 +114,7 @@ class QRValidationView(APIView):
             },status=status.HTTP_404_NOT_FOUND) 
             files= FilesSerialzer(File.objects.select_related('upload').filter(upload=upload_item.id),many=True).data
             
-            if len(files)==0:
-                return Response({
-                    "message":"Not found or Invalid QR"
-            },status=status.HTTP_404_NOT_FOUND)                 
+                 
             return   Response({
             "files":files,
             "upload_details":UploadSerializer(upload_item).data
@@ -130,13 +132,12 @@ def download_file(request,hash_id,file_id=None):
         files=FilesSerialzer(File.objects.select_related("upload").filter(id__in=split_files),many=True).data
     else:
         files=FilesSerialzer(File.objects.select_related("upload").filter(upload_id__hash=hash_id),many=True).data
-    print(files)
     final_file=None
     filename=None
     content_type="application/force-download"
     if len(files)==1:
-        if files[0].get('upload ',{}).get("hash")!=hash_id:
-            return Response({},status=status.HTTP_404_NOT_FOUND)
+        if files[0].get('upload',{}).get("hash")!=hash_id:
+            return Response({"msg":"file not present"},status=status.HTTP_404_NOT_FOUND)
         filename=files[0].get('name')
         file_path=PATH+f"/{hash_id}/{filename}"
 
@@ -149,21 +150,18 @@ def download_file(request,hash_id,file_id=None):
         with zipfile.ZipFile(final_file,"w", compression=zipfile.ZIP_DEFLATED) as zip_file:
 
             for file in files:
-                print(file)
                 if file.get('upload',{}).get("hash")!=hash_id:
                     return Response({},status=status.HTTP_404_NOT_FOUND)
                 file_path=PATH+f"/{hash_id}/{file.get('name')}"
                 if (os.path.exists(file_path)):
-                    print("write")
                     with open(file_path,"rb") as f:
-                            print(file_path)
                             zip_file.write(file_path,os.path.basename(file_path))
         final_file.seek(0)
     
         content_type="application/zip"
     response=HttpResponse(final_file,content_type=content_type)
     response['Content-Disposition']=f'attachment;filename={filename}'
-    return response
+    return response 
 
 class FileDelete(APIView):
     def delete(request,*args,**kwargs):
@@ -186,3 +184,59 @@ class FileDelete(APIView):
         return Response({
         
         },status=status.HTTP_200_OK)    
+    
+
+class LiveShare(APIView):
+    parser_classes = [FileUploadProgressHandler]
+
+    def get(self,request,*args,**kwargs):
+        print("log")
+        random_hash=generate_random_hash()
+        qr=generate_qr_code(random_hash)
+        upload_data=Upload.objects.create(hash=random_hash,total_files=0)
+
+        return Response({
+            "hash":random_hash,
+            "qr":qr
+        },status=status.HTTP_200_OK)
+    
+    
+    
+    
+    
+    def post(self,request,*args,**kwargs):
+        qr_hash=kwargs.get("hash")
+        print("qr_hash",qr_hash)
+        if not qr_hash: 
+            return Response({
+                "message":"Invalid QR"
+        },status=status.HTTP_404_NOT_FOUND)
+        if not os.path.exists(PATH):
+            os.mkdir("store")
+        print(request)
+        files = request.FILES
+        total_files=len(files)
+        upload_data=Upload.objects.filter(hash=qr_hash).get()
+        path=f"{PATH}/{qr_hash}"
+        if not os.path.exists(path):
+            os.mkdir(path)
+        for  filename,file in files.items():
+            print(file)
+            fs = FileSystemStorage(location=path)
+            fs.save(filename, file)
+            File.objects.create(name=filename,upload=upload_data,size=file.size,content_type=file.content_type)
+            print(file.name)
+            
+        
+        Upload.objects.filter(hash=qr_hash).update(total_files=upload_data.total_files+total_files)
+        files= FilesSerialzer(File.objects.select_related('upload').filter(upload=upload_data.id),many=True).data
+        channel_layer=get_channel_layer()
+        print(qr_hash)
+        async_to_sync(channel_layer.group_send)(qr_hash,{
+            "type":"send_file_update",
+            "files":files
+        })
+        return Response({
+              "msg":"message file uploaded",
+              "files":files,
+        },status=status.HTTP_200_OK)       
