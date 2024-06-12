@@ -17,10 +17,12 @@ The FileShare Web Application is a platform built to facilitate easy sharing of 
   - React: JavaScript library for building user interfaces.
   - TypeScript: Adds static typing to JavaScript to improve code quality.
   - Vite: A build tool for modern web development.
+  - Tailwind: UI Design
 - **Backend:**
   - Django: High-level Python web framework for rapid development.
   - Python: Backend programming language.
   - Socket: Real Time updates.
+  - Sqlite: Database
 - **Other Tools:**
   - QR Code Generator Library: Used to dynamically generate QR codes.
   - Axios: HTTP client for making requests to the backend API.
