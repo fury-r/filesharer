@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import './App.css';
 // import { QrReader } from "react-qr-reader";
 import { SplashScreen } from './components/SplashScreen';
-import UploadFile from './pages/UploadFiles';
-import LiveShare from './pages/LiveShare';
+import UploadFile from './app/UploadFiles';
+import LiveShare from './app/LiveShare';
 
 type EPage = 'UPLOAD_FILE' | 'LIVE_SHARE';
 

@@ -1,6 +1,6 @@
 import axios, { InternalAxiosRequestConfig } from 'axios';
 
-export const BASE_URL = `http://${import.meta.env.VITE_API_ENDPOINT || 'localhost:8001'}`;
+export const BASE_URL = `http://${process.env.NEXT_PUBLIC_SERVER || 'localhost:8001'}`;
 const axiosInstance = axios.create({
   baseURL: BASE_URL
 });
