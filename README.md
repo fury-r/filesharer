@@ -14,7 +14,7 @@ The FileShare Web Application is a platform built to facilitate easy sharing of 
 
 ## Technologies Used
 - **Frontend:**
-  - React: JavaScript library for building user interfaces.
+  - Next JS: JavaScript library for building user interfaces.
   - TypeScript: Adds static typing to JavaScript to improve code quality.
   - Vite: A build tool for modern web development.
   - Tailwind: UI Design

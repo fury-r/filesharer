@@ -1,7 +1,7 @@
-import { Dispatch, SetStateAction } from 'react';
-import { TFile } from '../types/Response';
-import { BASE_URL } from '../api/axios';
-import { downloadFile, formatBytes } from '../utils';
+import { Dispatch, SetStateAction } from "react";
+import { TFile } from "../types/Response";
+import { BASE_URL } from "../api/axios";
+import { downloadFile, formatBytes } from "../utils";
 
 interface IFileTable {
   setSelected: Dispatch<SetStateAction<number[]>>;
@@ -9,10 +9,15 @@ interface IFileTable {
   selected: number[];
   hash: string;
 }
-export const FileTable = ({ setSelected, selected, files, hash }: IFileTable) => {
+export const FileTable = ({
+  setSelected,
+  selected,
+  files,
+  hash,
+}: IFileTable) => {
   return (
     <div className="w-full max-h-96 min-h-fit ">
-      <h3>Total File:{files.length}</h3>
+      <h3 className=" text-base-content">Total File:{files.length}</h3>
       <table className="table  ">
         <thead>
           <tr>
@@ -21,7 +26,11 @@ export const FileTable = ({ setSelected, selected, files, hash }: IFileTable) =>
                 <input
                   type="checkbox"
                   onChange={() => {
-                    setSelected(() => (selected.length < files.length ? files.map((value) => value.id) : []));
+                    setSelected(() =>
+                      selected.length < files.length
+                        ? files.map((value) => value.id)
+                        : []
+                    );
                   }}
                   className="checkbox"
                   checked={selected.length === files.length}
@@ -55,18 +64,34 @@ export const FileTable = ({ setSelected, selected, files, hash }: IFileTable) =>
               </th>
               <td>
                 <div className="flex items-center gap-3">
-                  {value.name.length > 30 ? value.name.substring(0, 10) + '...' + value.name.substring(value.name.length - 10) : value.name}
+                  {value.name.length > 30
+                    ? value.name.substring(0, 10) +
+                      "..." +
+                      value.name.substring(value.name.length - 10)
+                    : value.name}
                 </div>
               </td>
               <td>
-                <div className="flex items-center gap-3">{value.content_type}</div>
-              </td>
-              <td>
-                <div className="flex items-center gap-3">{formatBytes(value.size)}</div>
+                <div className="flex items-center gap-3">
+                  {value.content_type}
+                </div>
               </td>
               <td>
                 <div className="flex items-center gap-3">
-                  <button className="btn" onClick={() => downloadFile(`${BASE_URL}/v1/file/download/${hash}/${value.id}/`, value.name)}>
+                  {formatBytes(value.size)}
+                </div>
+              </td>
+              <td>
+                <div className="flex items-center gap-3">
+                  <button
+                    className="btn"
+                    onClick={() =>
+                      downloadFile(
+                        `${BASE_URL}/v1/file/download/${hash}/${value.id}/`,
+                        value.name
+                      )
+                    }
+                  >
                     Download
                   </button>
                 </div>

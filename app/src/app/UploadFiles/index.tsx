@@ -1,14 +1,14 @@
-import { ChangeEvent, useCallback, useEffect, useRef, useState } from 'react';
-import MultiFileUpload from '../../components/MultiFileUpload';
+import { ChangeEvent, useCallback, useEffect, useRef, useState } from "react";
+import MultiFileUpload from "../../components/MultiFileUpload";
 // import { QrReader } from "react-qr-reader";
-import { FileTable, QRCode } from '../../components';
-import { useService } from '../../api/service/useService';
-import { TScanQRResponse, TUploadFileResponse } from '../../types/Response';
-import { downloadFile } from '../../utils/helperDom';
-import { BASE_URL } from '../../api/axios';
-import { isMobile } from '../../utils';
-import { UploadInput } from '../../components/UploadInput';
-import { toast } from 'react-toastify';
+import { FileTable, QRCode } from "../../components";
+import { useService } from "../../api/service/useService";
+import { TScanQRResponse, TUploadFileResponse } from "../../types/Response";
+import { downloadFile } from "../../utils/helperDom";
+import { BASE_URL } from "../../api/axios";
+import { isMobile } from "../../utils";
+import { UploadInput } from "../../components/UploadInput";
+import { toast } from "react-toastify";
 
 const UploadFile = () => {
   const [files, setFiles] = useState<File[]>([]);
@@ -18,7 +18,8 @@ const UploadFile = () => {
   const qrInputRef = useRef(null);
   const scanQrInputRef = useRef(null);
   const [selected, setSelected] = useState<number[]>([]);
-  const [fileUploadResponse, setFileUploadResponse] = useState<TUploadFileResponse | null>(null);
+  const [fileUploadResponse, setFileUploadResponse] =
+    useState<TUploadFileResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
 
   const inputRef = useRef(null);
@@ -41,9 +42,11 @@ const UploadFile = () => {
     const value = await uploadFileToServer(files, {
       onUploadProgress: (progressEvent: any) => {
         console.log(progressEvent);
-        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+        const percentCompleted = Math.round(
+          (progressEvent.loaded * 100) / progressEvent.total
+        );
         setProgress(percentCompleted);
-      }
+      },
     });
     if (value) {
       setFileUploadResponse(value);
@@ -63,7 +66,7 @@ const UploadFile = () => {
           setFiles([]);
         }
         const res = await uploadQRToServer(files[0]);
-        toast.success('Valid QR');
+        toast.success("Valid QR");
         if (res) setQRResponse(res);
       }
       setLoading(false);
@@ -73,8 +76,11 @@ const UploadFile = () => {
 
   const handleDelete = useCallback(async () => {
     if (qrResponse) {
-      await deleteFiles(qrResponse.upload_details.hash, selected.length === qrResponse.files.length ? '' : selected.join(',')).then(() => {
-        toast.success('File Deleted ');
+      await deleteFiles(
+        qrResponse.upload_details.hash,
+        selected.length === qrResponse.files.length ? "" : selected.join(",")
+      ).then(() => {
+        toast.success("File Deleted ");
         setQRResponse((prev) => {
           //@ts-ignore
           prev!.files! = prev?.files.filter(({ id }) => !selected.includes(id));
@@ -93,44 +99,61 @@ const UploadFile = () => {
         if (interval) {
           setProgress(0);
           clearInterval(interval);
-          toast.success('File Uploaded');
+          toast.success("File Uploaded");
         }
       }, 2000);
     }
   }, [progress]);
   return (
     <div className=" flex-col items-center justify-between p-5 mb-2 h-full">
-      <h1 className="font-bold m-5 whitespace-nowrap text-center">File Sharer</h1>
+      <h1 className="font-bold m-5 whitespace-nowrap text-center text-base-content ">
+        File Sharer
+      </h1>
       {fileUploadResponse?.qr && (
-        <QRCode isMobile={mobileView} fileUploadResponse={fileUploadResponse} setFileUploadResponse={setFileUploadResponse} />
+        <QRCode
+          isMobile={mobileView}
+          fileUploadResponse={fileUploadResponse}
+          setFileUploadResponse={setFileUploadResponse}
+        />
       )}
 
       <div className="w-full  h-fit flex flex-col items-center">
         {qrResponse ? (
           <div className=" overflow-auto">
             <div className="h-64">
-              <FileTable files={qrResponse.files} hash={qrResponse.upload_details.hash} selected={selected} setSelected={setSelected} />
+              <FileTable
+                files={qrResponse.files}
+                hash={qrResponse.upload_details.hash}
+                selected={selected}
+                setSelected={setSelected}
+              />
             </div>
             {selected.length > 1 && qrResponse.files.length > 1 && (
               <button
                 onClick={() =>
                   downloadFile(
                     `${BASE_URL}/v1/file/download/${
-                      selected.length < qrResponse.files.length ? `${qrResponse.upload_details.hash}/${selected.join(',')}/` : ''
+                      selected.length < qrResponse.files.length
+                        ? `${qrResponse.upload_details.hash}/${selected.join(",")}/`
+                        : ""
                     }`,
                     `${qrResponse.upload_details.hash}.zip`
                   )
                 }
-                className="btn m-5"
+                className="btn m-5 "
               >
                 Download
-                {selected.length === qrResponse.files.length ? ' All' : ' Selected'}
+                {selected.length === qrResponse.files.length
+                  ? " All"
+                  : " Selected"}
               </button>
             )}
             {selected.length > 0 && (
               <button onClick={() => handleDelete()} className="btn m-5">
                 Delete
-                {selected.length === qrResponse.files.length ? ' All' : ' Selected'}
+                {selected.length === qrResponse.files.length
+                  ? " All"
+                  : " Selected"}
               </button>
             )}
           </div>
@@ -148,14 +171,18 @@ const UploadFile = () => {
             <div
               className="bg-blue-600 text-xs font-medium text-blue-100 text-center p-0.5 leading-none rounded-full"
               style={{
-                width: `${progress}%`
+                width: `${progress}%`,
               }}
             >
               {progress}%
             </div>
           </div>
         )}
-        <button className="btn btn-outline   w-[60%] m-3" disabled={loading} onClick={uploadFile}>
+        <button
+          className="btn btn-outline   w-[60%] m-3"
+          disabled={loading}
+          onClick={uploadFile}
+        >
           Upload files
         </button>
         <div className="my-6 flex justify-between  ">
@@ -187,7 +214,11 @@ const UploadFile = () => {
           )}
         </div>
       </div>
-      <UploadInput handleQRInput={handleQRInput} qrInputRef={qrInputRef} scanQrInputRef={scanQrInputRef} />
+      <UploadInput
+        handleQRInput={handleQRInput}
+        qrInputRef={qrInputRef}
+        scanQrInputRef={scanQrInputRef}
+      />
     </div>
   );
 };
