@@ -1,9 +1,9 @@
-import { FaUser } from 'react-icons/fa';
-import { IoSend } from 'react-icons/io5';
-import { MdCancel } from 'react-icons/md';
-import { TChat } from '../../types/common';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { FaMessage } from 'react-icons/fa6';
+import { FaUser } from "react-icons/fa";
+import { IoSend } from "react-icons/io5";
+import { MdCancel } from "react-icons/md";
+import { TChat } from "../../types/common";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { FaMessage } from "react-icons/fa6";
 
 interface IChatBox {
   chats: TChat[];
@@ -12,23 +12,23 @@ interface IChatBox {
 }
 
 const ChatBox = ({ chats, onSend, sessionHash }: IChatBox) => {
-  const [text, setText] = useState('');
+  const [text, setText] = useState("");
   const [show, setShow] = useState(false);
   const [update, setUpdate] = useState(chats.length > 0);
   const ref = useRef<HTMLDivElement>(null);
 
   const handleSend = useCallback(() => {
     onSend(text);
-    setText('');
+    setText("");
   }, [onSend, text]);
 
   useEffect(() => {
     const listener = (ev: KeyboardEvent) => {
-      if (ev.code === 'Enter') {
+      if (ev.code === "Enter") {
         handleSend();
       }
     };
-    window.addEventListener('keydown', listener);
+    window.addEventListener("keydown", listener);
 
     // const divOutsideListener = (event: MouseEvent) => {
     //   if (ref.current && !ref.current.contains(event.target as Node)) {
@@ -37,7 +37,7 @@ const ChatBox = ({ chats, onSend, sessionHash }: IChatBox) => {
     // };
     // window.addEventListener('click', divOutsideListener);
     return () => {
-      window.removeEventListener('keydown', listener);
+      window.removeEventListener("keydown", listener);
       //   window.removeEventListener('click', divOutsideListener);
     };
   }, [handleSend]);
@@ -47,13 +47,21 @@ const ChatBox = ({ chats, onSend, sessionHash }: IChatBox) => {
   }, [chats]);
 
   return (
-    <div ref={ref} id="chat-box" data-theme="dark" className="absolute   bottom-5 right-5  flex flex-col justify-between">
+    <div
+      ref={ref}
+      id="chat-box"
+      data-theme="dark"
+      className="absolute   bottom-5 right-5  flex flex-col justify-between shadow-md z-10  "
+    >
       {show ? (
         <div className="   border-2 border-solid border-white w-[250px] h-[300px]  bg-white shadow-md rounded-lg flex flex-col justify-between">
           <div className="flex flex-row justify-between items-center p-2">
-            <div className="flex w-[200px] flex-row">
+            <div className="flex w-[200px] flex-row  text-base-content">
               <h3 className="font-bold">Session</h3>:
-              <h4 title={sessionHash} className="text-ellipsis w-4/6 whitespace-nowrap overflow-hidden">
+              <h4
+                title={sessionHash}
+                className="text-ellipsis w-4/6 whitespace-nowrap overflow-hidden"
+              >
                 {sessionHash}
               </h4>
             </div>
@@ -62,14 +70,16 @@ const ChatBox = ({ chats, onSend, sessionHash }: IChatBox) => {
           <div className="overflow-auto h-5/6">
             {chats.map((value, key) => {
               return value.user === 2 ? (
-                <div className="chat chat-start" key={key}>
+                <div className="chat chat-start " key={key}>
                   <div className="chat-image avatar">
                     <div className="w-10 rounded-full">
                       <FaUser className="text-gray-700" size="100%" />
                     </div>
                   </div>
 
-                  <div className="chat-bubble chat-bubble-primary">{value.message}</div>
+                  <div className="chat-bubble chat-bubble-primary  text-base-content">
+                    {value.message}
+                  </div>
                 </div>
               ) : (
                 <div className="chat chat-end" key={key}>
@@ -78,12 +88,14 @@ const ChatBox = ({ chats, onSend, sessionHash }: IChatBox) => {
                       <FaUser className="text-gray-700" size="100%" />
                     </div>
                   </div>
-                  <div className="chat-bubble chat-bubble-info">{value.message}</div>
+                  <div className="chat-bubble chat-bubble-info  text-base-content">
+                    {value.message}
+                  </div>
                 </div>
               );
             })}
           </div>
-          <div className="m-2  flex flex-row items-center">
+          <div className="m-2  flex flex-row items-center  text-base-content">
             <input
               value={text}
               className="h-8 rounded-l-xl p-3 "
@@ -93,7 +105,11 @@ const ChatBox = ({ chats, onSend, sessionHash }: IChatBox) => {
                 setText(e.target.value);
               }}
             />
-            <button className="h-8  rounded-r-xl w-full flex flex-row items-center justify-center" onClick={handleSend} data-theme="dark">
+            <button
+              className="h-8  rounded-r-xl w-full flex flex-row items-center justify-center"
+              onClick={handleSend}
+              data-theme="dark"
+            >
               <IoSend />
             </button>
           </div>
@@ -106,7 +122,9 @@ const ChatBox = ({ chats, onSend, sessionHash }: IChatBox) => {
             setUpdate(false);
           }}
         >
-          {update && <div className="rounded-badge h-[8px] w-[8px] bg-red-600 absolute top-[-5px] right-[-2px]"></div>}
+          {update && (
+            <div className="rounded-badge h-[8px] w-[8px] bg-red-600 absolute top-[-5px] right-[-2px]"></div>
+          )}
           <FaMessage size="30px" />
         </button>
       )}

@@ -1,13 +1,20 @@
-import { useState, useMemo, useCallback, ChangeEvent, useEffect } from 'react';
-import { toast } from 'react-toastify';
-import { useService } from '../../../api/service/useService';
-import { TChat } from '../../../types/common';
-import { TUploadFileResponse, TScanQRResponse } from '../../../types/Response';
-import { v4 as uuidv4 } from 'uuid';
+"use client";
+
+import { useState, useMemo, useCallback, ChangeEvent, useEffect } from "react";
+import { toast } from "react-toastify";
+import { useService } from "../../../api/service/useService";
+import { TChat } from "../../../types/common";
+import { TUploadFileResponse, TScanQRResponse } from "../../../types/Response";
+import { v4 as uuidv4 } from "uuid";
 
 export const useLiveShare = () => {
   const [files, setFiles] = useState<File[]>([]);
-  const { generateLiveShareSession, uploadQRToServer, uploadFilesInSession, deleteFiles } = useService();
+  const {
+    generateLiveShareSession,
+    uploadQRToServer,
+    uploadFilesInSession,
+    deleteFiles,
+  } = useService();
   const [session, setSession] = useState<TUploadFileResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [qrResponse, setQRResponse] = useState<TScanQRResponse | null>(null);
@@ -40,8 +47,8 @@ export const useLiveShare = () => {
           reader.onload = () => {
             setSession({
               hash: res.upload_details.hash,
-              qr: (reader.result as string).split(',')[1],
-              files: res.files
+              qr: (reader.result as string).split(",")[1],
+              files: res.files,
             });
           };
         }
@@ -56,13 +63,16 @@ export const useLiveShare = () => {
     if (response) setSession(response);
     setLoading(false);
     setUserCount(1);
-    toast.success('Session Created');
+    toast.success("Session Created");
   }, [generateLiveShareSession]);
 
   const handleDelete = useCallback(async () => {
     if (qrResponse) {
-      await deleteFiles(qrResponse.upload_details.hash, selected.length === qrResponse.files.length ? '' : selected.join(',')).then(() => {
-        toast.success('File Deleted ');
+      await deleteFiles(
+        qrResponse.upload_details.hash,
+        selected.length === qrResponse.files.length ? "" : selected.join(",")
+      ).then(() => {
+        toast.success("File Deleted ");
         setSession((prev) => {
           //@ts-ignore
           prev!.files! = prev?.files.filter(({ id }) => !selected.includes(id));
@@ -77,14 +87,16 @@ export const useLiveShare = () => {
 
   const handleUpload = useCallback(
     async (files: File[]) => {
-      console.log('called');
+      console.log("called");
       if (files.length > 0) {
         const res = await uploadFilesInSession(files, session!.hash!, {
           onUploadProgress: (progressEvent: any) => {
             console.log(progressEvent);
-            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            const percentCompleted = Math.round(
+              (progressEvent.loaded * 100) / progressEvent.total
+            );
             setProgress(percentCompleted);
-          }
+          },
         });
         if (res) {
           setFiles([]);
@@ -96,20 +108,22 @@ export const useLiveShare = () => {
 
   useEffect(() => {
     if (session?.hash && !socketconnect) {
-      const sockets = new WebSocket(`ws://${import.meta.env.VITE_API_ENDPOINT || 'localhost:8001'}/ws/file/${session.hash}/${uuid}`);
+      const sockets = new WebSocket(
+        `ws://${process.env.NEXT_PUBLIC_SERVER || "localhost:8001"}/ws/file/${session.hash}/${uuid}`
+      );
       sockets.onmessage = (e) => {
         const data = JSON.parse(e.data);
         console.log(data);
         if (data?.files) {
-          toast.success('New file added');
+          toast.success("New file added");
 
           setSession((prev) => ({
             ...(prev as TUploadFileResponse),
-            files: data.files
+            files: data.files,
           }));
         }
         if (data?.count) {
-          toast.success('Users updated');
+          toast.success("Users updated");
 
           setUserCount(data?.count);
         }
@@ -130,7 +144,7 @@ export const useLiveShare = () => {
         if (interval) {
           setProgress(0);
           clearInterval(interval);
-          toast.success('File Uploaded');
+          toast.success("File Uploaded");
         }
       }, 2000);
     }
@@ -152,6 +166,6 @@ export const useLiveShare = () => {
     handleCreateSession,
     handleQRInput,
     handleUpload,
-    setSession
+    setSession,
   };
 };

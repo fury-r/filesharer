@@ -1,14 +1,14 @@
-import { ChangeEvent, useEffect, useState } from 'react';
-import { AiOutlineCheckCircle, AiOutlineCloudUpload } from 'react-icons/ai';
-import { MdClear } from 'react-icons/md';
-import './style.css';
+import { ChangeEvent, useEffect, useState } from "react";
+import { AiOutlineCheckCircle, AiOutlineCloudUpload } from "react-icons/ai";
+import { MdClear } from "react-icons/md";
+import "./style.css";
 
 const MultiFileUpload = ({
   onFilesSelected,
   inputRef,
   width,
   height,
-  fileState
+  fileState,
 }: {
   inputRef: React.MutableRefObject<null>;
   onFilesSelected: (files: File[]) => void;
@@ -54,18 +54,25 @@ const MultiFileUpload = ({
   return (
     <section className="drag-drop" style={{ width: width, height: height }}>
       <div
-        className={`document-uploader border-red-600 ${files.length > 0 ? 'upload-box active' : 'upload-box'}`}
+        className={`document-uploader border-red-600 ${files.length > 0 ? "upload-box active" : "upload-box"}`}
         onDrop={handleDrop}
         onDragOver={(event) => event.preventDefault()}
       >
         <>
           <div className="upload-info">
             <AiOutlineCloudUpload />
-            <div>
+            <div className="text-base-content">
               <p>Drag and drop your files here</p>
             </div>
           </div>
-          <input type="file" hidden id="browse" onChange={handleFileChange} ref={inputRef} multiple />
+          <input
+            type="file"
+            hidden
+            id="browse"
+            onChange={handleFileChange}
+            ref={inputRef}
+            multiple
+          />
           <label htmlFor="browse" className="browse-btn">
             Browse files
           </label>
@@ -76,7 +83,7 @@ const MultiFileUpload = ({
             <div className="file-list__container  h-fit">
               {files.map((file, index) => (
                 <div className="file-item" key={index}>
-                  <div className="file-info">
+                  <div className="file-info  text-base-content">
                     <p>{file.name}</p>
                     {/* <p>{file.type}</p> */}
                   </div>
@@ -90,8 +97,10 @@ const MultiFileUpload = ({
         )}
 
         {files.length > 0 && (
-          <div className="success-file ">
-            <AiOutlineCheckCircle style={{ color: '#6DC24B', marginRight: 1 }} />
+          <div className="success-file  text-base-content ">
+            <AiOutlineCheckCircle
+              style={{ color: "#6DC24B", marginRight: 1 }}
+            />
             <p>{files.length} file(s) selected</p>
           </div>
         )}

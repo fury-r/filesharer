@@ -1,11 +1,11 @@
-import { useCallback, useRef } from 'react';
-import MultiFileUpload from '../../components/MultiFileUpload';
-import { UploadInput } from '../../components/UploadInput';
-import { FileTable, QRCode } from '../../components';
-import { downloadFile, isMobile } from '../../utils';
-import { BASE_URL } from '../../api/axios';
-import ChatBox from '../../components/ChatBox';
-import { useLiveShare } from './hooks/useLiveShare';
+import { useCallback, useRef } from "react";
+import MultiFileUpload from "../../components/MultiFileUpload";
+import { UploadInput } from "../../components/UploadInput";
+import { FileTable, QRCode } from "../../components";
+import { downloadFile, isMobile } from "../../utils";
+import { BASE_URL } from "../../api/axios";
+import ChatBox from "../../components/ChatBox";
+import { useLiveShare } from "./hooks/useLiveShare";
 
 const LiveShare = () => {
   const inputRef = useRef(null);
@@ -25,7 +25,7 @@ const LiveShare = () => {
     handleUpload,
     setSession,
     setSelected,
-    handleDelete
+    handleDelete,
   } = useLiveShare();
 
   const mobileView = isMobile();
@@ -34,14 +34,20 @@ const LiveShare = () => {
 
   const onSend = useCallback(
     (message: string) => {
-      socketconnect?.send(JSON.stringify({ uuid, message, session_hash: session?.hash }));
+      socketconnect?.send(
+        JSON.stringify({ uuid, message, session_hash: session?.hash })
+      );
     },
     [session?.hash, socketconnect, uuid]
   );
 
   return !session?.qr && !qrResponse?.upload_details.hash ? (
     <div className="flex justify-center items-center h-4/6">
-      <button className="btn btn-outline m-3" onClick={handleCreateSession} disabled={loading}>
+      <button
+        className="btn btn-outline m-3"
+        onClick={handleCreateSession}
+        disabled={loading}
+      >
         Create Session
       </button>
       <button
@@ -60,56 +66,82 @@ const LiveShare = () => {
         Upload QR to join Session
       </button>
 
-      <UploadInput handleQRInput={handleQRInput} qrInputRef={qrInputRef} scanQrInputRef={scanQrInputRef} />
+      <UploadInput
+        handleQRInput={handleQRInput}
+        qrInputRef={qrInputRef}
+        scanQrInputRef={scanQrInputRef}
+      />
     </div>
   ) : (
     <div className="flex flex-col items-center ">
-      <h3>Total Live Users: {userCount}</h3>
+      <h3 className=" text-base-content">Total Live Users: {userCount}</h3>
       {session?.files && session?.files.length > 0 ? (
         <div className=" overflow-auto  h-1/2  m-5">
-          <FileTable files={session.files} hash={session.hash} selected={selected} setSelected={setSelected} />
+          <FileTable
+            files={session.files}
+            hash={session.hash}
+            selected={selected}
+            setSelected={setSelected}
+          />
           {selected.length > 1 && session.files.length > 1 && (
             <button
               onClick={() =>
                 downloadFile(
-                  `${BASE_URL}/v1/file/download/${selected.length < session.files!.length ? `${session.hash}/${selected.join(',')}/` : ''}`,
+                  `${BASE_URL}/v1/file/download/${selected.length < session.files!.length ? `${session.hash}/${selected.join(",")}/` : ""}`,
                   `${session.hash}.zip`
                 )
               }
               className="btn m-5"
             >
               Download
-              {selected.length === session.files.length ? ' All' : ' Selected'}
+              {selected.length === session.files.length ? " All" : " Selected"}
             </button>
           )}
           {selected.length > 0 && (
             <button onClick={() => handleDelete()} className="btn m-5">
               Delete
-              {selected.length === session.files.length ? ' All' : ' Selected'}
+              {selected.length === session.files.length ? " All" : " Selected"}
             </button>
           )}
         </div>
       ) : (
-        <div className="m-5 p-5 text-2xl font-bold underline border-white border-dotted border-spacing-2 border-[1px] rounded-md">
+        <div className="m-5 p-5 text-2xl font-bold underline border-white border-dotted border-spacing-2 border-[1px] rounded-md  text-base-content">
           No files uploaded yet
         </div>
       )}
-      <div>{session?.hash && <MultiFileUpload fileState={files} onFilesSelected={handleUpload} inputRef={inputRef} width="100%" />}</div>
-      {session?.qr && <QRCode isMobile={mobileView} fileUploadResponse={session} setFileUploadResponse={setSession} />}
+      <div>
+        {session?.hash && (
+          <MultiFileUpload
+            fileState={files}
+            onFilesSelected={handleUpload}
+            inputRef={inputRef}
+            width="100%"
+          />
+        )}
+      </div>
+      {session?.qr && (
+        <QRCode
+          isMobile={mobileView}
+          fileUploadResponse={session}
+          setFileUploadResponse={setSession}
+        />
+      )}
 
       {progress > 0 && (
         <div className="w-full h-fit bg-gray-200 rounded-full dark:bg-gray-700 m-5">
           <div
-            className="bg-blue-600 text-xs font-medium text-blue-100 text-center p-0.5 leading-none rounded-full"
+            className="bg-blue-600 text-xs font-medium text-blue-100 text-center p-0.5 leading-none rounded-full "
             style={{
-              width: `${progress}%`
+              width: `${progress}%`,
             }}
           >
             {progress}%
           </div>
         </div>
       )}
-      {session?.hash && <ChatBox chats={chats} onSend={onSend} sessionHash={session.hash} />}
+      {session?.hash && (
+        <ChatBox chats={chats} onSend={onSend} sessionHash={session.hash} />
+      )}
     </div>
   );
 };
