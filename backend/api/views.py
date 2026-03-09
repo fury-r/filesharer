@@ -1,9 +1,6 @@
-import base64
 from io import BytesIO
-from django.shortcuts import render
 
 from api import PATH
-from .utils import generate_qr_code, generate_random_hash, verify_qr_code
 from rest_framework import generics,status
 from rest_framework.response import Response
 from .models import BlogPost,Upload, File
@@ -16,9 +13,8 @@ from rest_framework.views import APIView
 import os
 from django.core.files.storage import FileSystemStorage
 from django.core.files.uploadhandler import FileUploadHandler
-from PIL import Image
 import zipfile
-from django.http import HttpResponse,FileResponse
+from django.http import HttpResponse
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 # Create your views here.
@@ -67,6 +63,8 @@ class FileUploadView(APIView):
     parser_classes = [FileUploadProgressHandler]
 
     def post(self, request, *args, **kwargs):
+        from .utils import generate_qr_code
+
         print(request)
         if not os.path.exists(PATH):
             os.mkdir("store")
@@ -95,6 +93,9 @@ class FileUploadView(APIView):
 
 class QRValidationView(APIView):
     def post(self,request,*args,**kwargs):
+        from PIL import Image
+        from .utils import verify_qr_code
+
         qr=request.FILES.get("qr")
         qr=Image.open(qr)
         buffered=BytesIO()
@@ -190,6 +191,8 @@ class LiveShare(APIView):
     parser_classes = [FileUploadProgressHandler]
 
     def get(self,request,*args,**kwargs):
+        from .utils import generate_qr_code, generate_random_hash
+
         print("log")
         random_hash=generate_random_hash()
         qr=generate_qr_code(random_hash)

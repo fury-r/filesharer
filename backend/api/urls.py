@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from .mcp_views import MCPSessionCreateView, MCPSessionDetailView
 
 
 urlpatterns=[
@@ -14,5 +15,7 @@ urlpatterns=[
     path("v1/file/live/session/<str:hash>/",views.LiveShare.as_view(),name="file-live-session-upload"),
     path("v1/file/download/<str:hash_id>/",views.download_file,name="file-zip-download"),
     path("v1/file/download/<str:hash_id>/<str:file_id>/",views.download_file,name="file-download"),
+    path("v1/mcp/session/",MCPSessionCreateView.as_view(),name="mcp-session-create"),
+    path("v1/mcp/session/<str:session_id>/",MCPSessionDetailView.as_view(),name="mcp-session-detail"),
 
 ]
