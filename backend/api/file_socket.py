@@ -1,7 +1,6 @@
 import json
 import shutil
 from channels.generic.websocket import AsyncWebsocketConsumer
-from api.models import Upload
 from api import PATH, users
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
@@ -45,6 +44,8 @@ class FileUpload(AsyncWebsocketConsumer):
         count=len(users[self.session_hash]["users"])
         #clears session history
         if count==0:
+            from api.models import Upload
+
             users.pop(self.session_hash)
             shutil.rmtree(PATH+f"/{self.session_hash}/")
             Upload.objects.filter(hash=self.session_hash).delete()

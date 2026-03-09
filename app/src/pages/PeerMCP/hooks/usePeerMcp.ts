@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
 import { v4 as uuidv4 } from 'uuid';
 import { useService } from '../../../api/service/useService';
-import { TMcpMessage, TMcpPeer, TMcpRole, TMcpSessionResponse, TMcpSignalMessage, TMcpTimelineEvent, TMcpTool } from '../../../types/mcp';
+import { FilesharerP2PMcpClient, TMcpPeer, TMcpRole, TMcpSessionResponse, TMcpTimelineEvent, TMcpTool } from '../../../modules/p2p-mcp';
 
 const LOCAL_MCP_TOOLS: TMcpTool[] = [
   {
@@ -51,14 +51,6 @@ const getSocketBaseUrl = () => {
   return `${protocol}://${import.meta.env.VITE_API_ENDPOINT || 'localhost:8001'}`;
 };
 
-const createTimelineEvent = (direction: TMcpTimelineEvent['direction'], title: string, detail: string): TMcpTimelineEvent => ({
-  id: uuidv4(),
-  direction,
-  title,
-  detail,
-  timestamp: new Date().toLocaleTimeString()
-});
-
 const clampTimeline = (events: TMcpTimelineEvent[]) => events.slice(-MAX_TIMELINE_ENTRIES);
 
 export const usePeerMcp = () => {
@@ -78,307 +70,135 @@ export const usePeerMcp = () => {
   const [webrtcState, setWebrtcState] = useState('idle');
   const [channelState, setChannelState] = useState<'idle' | 'opening' | 'open' | 'closed'>('idle');
   const [isBusy, setIsBusy] = useState(false);
-  const websocketRef = useRef<WebSocket | null>(null);
-  const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
-  const dataChannelRef = useRef<RTCDataChannel | null>(null);
-  const remotePeerIdRef = useRef<string>();
-  const offerStartedRef = useRef(false);
-  const queuedIceCandidatesRef = useRef<RTCIceCandidateInit[]>([]);
-  const roleRef = useRef(role);
+  const clientRef = useRef<FilesharerP2PMcpClient | null>(null);
   const peerNameRef = useRef(peerName);
   const sessionIdRef = useRef(session?.session_id || '');
   const remotePeerCountRef = useRef(remotePeers.length);
   const selectedToolRef = useRef(selectedTool);
 
-  const appendTimeline = useCallback((direction: TMcpTimelineEvent['direction'], title: string, detail: string) => {
-    setTimeline((previous) => clampTimeline([...previous, createTimelineEvent(direction, title, detail)]));
+  const appendTimeline = useCallback((event: TMcpTimelineEvent) => {
+    setTimeline((previous) => clampTimeline([...previous, event]));
   }, []);
 
   useEffect(() => {
-    roleRef.current = role;
     peerNameRef.current = peerName;
     sessionIdRef.current = session?.session_id || '';
     remotePeerCountRef.current = remotePeers.length;
     selectedToolRef.current = selectedTool;
-  }, [peerName, remotePeers.length, role, selectedTool, session?.session_id]);
+  }, [peerName, remotePeers.length, selectedTool, session?.session_id]);
 
-  const resetPeerConnection = useCallback(() => {
-    if (dataChannelRef.current) {
-      dataChannelRef.current.close();
+  const getProviderResult = useCallback((toolName: string, parameters: Record<string, unknown>) => {
+    const activePeerName = peerNameRef.current;
+    const activeSessionId = sessionIdRef.current;
+    const activePeerCount = remotePeerCountRef.current + 1;
+    const deviceId = String(parameters.device_id || 'edge-gateway-01');
+
+    switch (toolName) {
+      case 'get_device_status':
+        return {
+          device_id: deviceId,
+          session_id: activeSessionId,
+          peer: activePeerName,
+          transport: 'webrtc-datachannel',
+          status: 'healthy',
+          active_peers: activePeerCount,
+          last_seen: new Date().toISOString()
+        };
+      case 'get_recent_logs':
+        return Array.from({ length: Math.min(Math.max(parseInt(String(parameters.limit || 5), 10) || 5, 1), MAX_LOG_ENTRIES) }, (_, index) => ({
+          timestamp: new Date(Date.now() - index * MS_PER_MINUTE).toISOString(),
+          level: index === 0 ? 'warning' : 'info',
+          message: `${deviceId}: telemetry window ${index + 1} stayed on the peer device`
+        }));
+      case 'run_diagnostics':
+        return {
+          device_id: deviceId,
+          checks: {
+            cpu: 'nominal',
+            memory: 'nominal',
+            network: parameters.include_network ? 'direct-peer-link-ready' : 'skipped'
+          },
+          recommendation: 'No action required'
+        };
+      case 'restart_device':
+        return {
+          device_id: deviceId,
+          status: 'queued',
+          authorization: 'local-confirmation-required',
+          reason: parameters.reason || 'unspecified'
+        };
+      default:
+        return {
+          error: `Unknown tool: ${toolName}`
+        };
     }
-    if (peerConnectionRef.current) {
-      peerConnectionRef.current.close();
-    }
-    dataChannelRef.current = null;
-    peerConnectionRef.current = null;
-    remotePeerIdRef.current = undefined;
-    offerStartedRef.current = false;
-    queuedIceCandidatesRef.current = [];
+  }, []);
+
+  const resetClient = useCallback(() => {
+    clientRef.current?.disconnect();
+    clientRef.current = null;
+    setSignalingState('idle');
     setWebrtcState('idle');
     setChannelState('idle');
   }, []);
 
-  const publishPeerPresence = useCallback((nextRole: TMcpRole) => {
-    websocketRef.current?.send(
-      JSON.stringify({
-        type: 'peer_announce',
-        name: peerNameRef.current.trim() || (nextRole === 'provider' ? 'Edge Gateway' : 'AI Client'),
-        role: nextRole,
-        tools: nextRole === 'provider' ? LOCAL_MCP_TOOLS : []
-      })
-    );
-  }, []);
-
-  const sendSignalMessage = useCallback((targetPeerId: string, signalType: TMcpSignalMessage['signal_type'], payload: TMcpSignalMessage['payload']) => {
-    websocketRef.current?.send(
-      JSON.stringify({
-        type: 'signal',
-        target_peer_id: targetPeerId,
-        signal_type: signalType,
-        payload
-      })
-    );
-  }, []);
-
-  // These refs let the provider answer tool calls with the latest peer/session data
-  // without forcing the WebRTC event handlers to re-subscribe on every UI state change.
-  const getProviderResult = useCallback((toolName: string, parameters: Record<string, unknown>) => {
-      const activePeerName = peerNameRef.current;
-      const activeSessionId = sessionIdRef.current;
-      const activePeerCount = remotePeerCountRef.current + 1;
-      const deviceId = String(parameters.device_id || 'edge-gateway-01');
-      switch (toolName) {
-        case 'get_device_status':
-          return {
-            device_id: deviceId,
-            session_id: activeSessionId,
-            peer: activePeerName,
-            transport: 'webrtc-datachannel',
-            status: 'healthy',
-            active_peers: activePeerCount,
-            last_seen: new Date().toISOString()
-          };
-        case 'get_recent_logs':
-          return Array.from({ length: Math.min(Math.max(parseInt(String(parameters.limit || 5), 10) || 5, 1), MAX_LOG_ENTRIES) }, (_, index) => ({
-            timestamp: new Date(Date.now() - index * MS_PER_MINUTE).toISOString(),
-            level: index === 0 ? 'warning' : 'info',
-            message: `${deviceId}: telemetry window ${index + 1} stayed on the peer device`
-          }));
-        case 'run_diagnostics':
-          return {
-            device_id: deviceId,
-            checks: {
-              cpu: 'nominal',
-              memory: 'nominal',
-              network: parameters.include_network ? 'direct-peer-link-ready' : 'skipped'
-            },
-            recommendation: 'No action required'
-          };
-        case 'restart_device':
-          return {
-            device_id: deviceId,
-            status: 'queued',
-            authorization: 'local-confirmation-required',
-            reason: parameters.reason || 'unspecified'
-          };
-        default:
-          return {
-            error: `Unknown tool: ${toolName}`
-          };
-      }
-    },
-    []
-  );
-
-  const handleDataChannelMessage = useCallback(
-    (rawMessage: string) => {
-      const message = JSON.parse(rawMessage) as TMcpMessage;
-
-      if (message.type === 'tool_catalog') {
-        setRemoteTools(message.tools);
-        appendTimeline('inbound', 'Tool catalog synced', `${message.tools.length} tools published by ${message.peerName}`);
-        if (message.tools.length > 0) {
-          setSelectedTool(message.tools[0].name);
-          setParametersText(JSON.stringify(message.tools[0].parameters, null, 2));
-        }
-        return;
-      }
-
-      if (message.type === 'tool_call') {
-        appendTimeline('inbound', `Tool call • ${message.tool}`, JSON.stringify(message.parameters, null, 2));
-        if (roleRef.current !== 'provider' || !dataChannelRef.current) {
-          return;
-        }
-
-        const result = getProviderResult(message.tool, message.parameters);
-        dataChannelRef.current.send(
-          JSON.stringify({
-            type: 'tool_result',
-            requestId: message.requestId,
-            tool: message.tool,
-            result,
-            ok: !('error' in (result as Record<string, unknown>))
-          })
-        );
-        appendTimeline('outbound', `Tool result • ${message.tool}`, 'Result returned directly over the encrypted data channel');
-        return;
-      }
-
-      if (message.type === 'tool_result') {
-        setLastResult(JSON.stringify(message.result, null, 2));
-        appendTimeline('inbound', `Tool result • ${message.tool}`, message.ok ? 'Received a successful peer response' : 'Peer returned an error');
-      }
-    },
-    [appendTimeline, getProviderResult]
-  );
-
-  const attachDataChannel = useCallback(
-    (channel: RTCDataChannel) => {
-      dataChannelRef.current = channel;
-      setChannelState(channel.readyState === 'open' ? 'open' : 'opening');
-
-      channel.onopen = () => {
-        setChannelState('open');
-        appendTimeline('system', 'Data channel open', 'MCP messages are now moving peer-to-peer over WebRTC');
-        if (roleRef.current === 'provider') {
-          channel.send(
-            JSON.stringify({
-              type: 'tool_catalog',
-              tools: LOCAL_MCP_TOOLS,
-              peerName: peerNameRef.current
-            })
-          );
-        }
-      };
-
-      channel.onclose = () => {
-        setChannelState('closed');
-        appendTimeline('system', 'Data channel closed', 'The direct peer link was closed');
-      };
-
-      channel.onerror = () => {
-        toast.error('The MCP data channel encountered an error');
-      };
-
-      channel.onmessage = (event) => {
-        handleDataChannelMessage(event.data);
-      };
-    },
-    [appendTimeline, handleDataChannelMessage]
-  );
-
-  const applyQueuedIceCandidates = useCallback(async () => {
-    if (!peerConnectionRef.current || !peerConnectionRef.current.remoteDescription) {
+  const syncSelectedTool = useCallback((tools: TMcpTool[]) => {
+    if (tools.length === 0) {
       return;
     }
 
-    for (const candidate of queuedIceCandidatesRef.current) {
-      await peerConnectionRef.current.addIceCandidate(candidate);
-    }
-    queuedIceCandidatesRef.current = [];
+    const activeTool = tools.find((tool) => tool.name === selectedToolRef.current) || tools[0];
+    setSelectedTool(activeTool.name);
+    setParametersText(JSON.stringify(activeTool.parameters, null, 2));
   }, []);
 
-  const createPeerConnection = useCallback(
-    (targetPeerId: string, shouldCreateDataChannel: boolean) => {
-      const connection = new RTCPeerConnection();
-      remotePeerIdRef.current = targetPeerId;
-      peerConnectionRef.current = connection;
-      setWebrtcState('negotiating');
+  const buildClient = useCallback(
+    (nextRole: TMcpRole) =>
+      new FilesharerP2PMcpClient({
+        signalingBaseUrl: getSocketBaseUrl(),
+        identity: {
+          peerId: localPeerId,
+          peerName: peerNameRef.current.trim() || (nextRole === 'provider' ? 'Edge Gateway' : 'AI Client'),
+          role: nextRole,
+          tools: nextRole === 'provider' ? LOCAL_MCP_TOOLS : []
+        },
+        toolCallHandler: async (message) => getProviderResult(message.tool, message.parameters),
+        onConnectionStateChange: (state) => {
+          setSignalingState(state.signalingState);
+          setWebrtcState(state.webrtcState);
+          setChannelState(state.channelState);
+        },
+        onPeerSnapshot: (snapshot) => {
+          const peers = snapshot.peers.filter((peer) => peer.peer_id !== localPeerId);
+          setSession((previous) =>
+            previous
+              ? {
+                  ...previous,
+                  peer_count: snapshot.peer_count,
+                  peers: snapshot.peers
+                }
+              : null
+          );
+          setRemotePeers(peers);
 
-      connection.onconnectionstatechange = () => {
-        setWebrtcState(connection.connectionState);
-      };
-
-      connection.onicecandidate = (event) => {
-        if (event.candidate) {
-          sendSignalMessage(targetPeerId, 'ice', {
-            candidate: event.candidate.toJSON()
-          });
+          const providerPeer = peers.find((peer) => peer.role === 'provider');
+          if (nextRole === 'client') {
+            setRemoteTools(providerPeer?.tools || []);
+            if (providerPeer?.tools?.length) {
+              syncSelectedTool(providerPeer.tools);
+            }
+          }
+        },
+        onTimelineEvent: appendTimeline,
+        onToolCatalog: (message) => {
+          setRemoteTools(message.tools);
+          syncSelectedTool(message.tools);
+        },
+        onToolResult: (message) => {
+          setLastResult(JSON.stringify(message.result, null, 2));
         }
-      };
-
-      connection.ondatachannel = (event) => {
-        attachDataChannel(event.channel);
-      };
-
-      if (shouldCreateDataChannel) {
-        attachDataChannel(connection.createDataChannel('mcp-tools', { ordered: true }));
-      }
-
-      return connection;
-    },
-    [attachDataChannel, sendSignalMessage]
-  );
-
-  const startOffer = useCallback(
-    async (targetPeerId: string) => {
-      if (offerStartedRef.current) {
-        return;
-      }
-
-      offerStartedRef.current = true;
-      appendTimeline('system', 'Negotiating WebRTC', `Creating an SDP offer for peer ${targetPeerId}`);
-      const connection = createPeerConnection(targetPeerId, true);
-      const offer = await connection.createOffer();
-      await connection.setLocalDescription(offer);
-      sendSignalMessage(targetPeerId, 'offer', {
-        sdp: offer.sdp,
-        type: offer.type
-      });
-    },
-    [appendTimeline, createPeerConnection, sendSignalMessage]
-  );
-
-  const handleSignalMessage = useCallback(
-    async (message: TMcpSignalMessage) => {
-      if (message.target_peer_id && message.target_peer_id !== localPeerId) {
-        return;
-      }
-
-      if (message.signal_type === 'offer') {
-        appendTimeline('inbound', 'Received offer', `Peer ${message.from_peer_id} requested a direct MCP channel`);
-        const connection = createPeerConnection(message.from_peer_id, false);
-        await connection.setRemoteDescription(
-          new RTCSessionDescription({
-            type: message.payload.type || 'offer',
-            sdp: message.payload.sdp || ''
-          })
-        );
-        const answer = await connection.createAnswer();
-        await connection.setLocalDescription(answer);
-        await applyQueuedIceCandidates();
-        sendSignalMessage(message.from_peer_id, 'answer', {
-          sdp: answer.sdp,
-          type: answer.type
-        });
-        return;
-      }
-
-      if (!peerConnectionRef.current) {
-        return;
-      }
-
-      if (message.signal_type === 'answer') {
-        appendTimeline('inbound', 'Received answer', `Peer ${message.from_peer_id} accepted the direct link`);
-        await peerConnectionRef.current.setRemoteDescription(
-          new RTCSessionDescription({
-            type: message.payload.type || 'answer',
-            sdp: message.payload.sdp || ''
-          })
-        );
-        await applyQueuedIceCandidates();
-        return;
-      }
-
-      if (message.signal_type === 'ice' && message.payload.candidate) {
-        if (peerConnectionRef.current.remoteDescription) {
-          await peerConnectionRef.current.addIceCandidate(message.payload.candidate);
-          return;
-        }
-        queuedIceCandidatesRef.current.push(message.payload.candidate);
-      }
-    },
-    [appendTimeline, applyQueuedIceCandidates, createPeerConnection, localPeerId, sendSignalMessage]
+      }),
+    [appendTimeline, getProviderResult, localPeerId, syncSelectedTool]
   );
 
   useEffect(() => {
@@ -386,66 +206,29 @@ export const usePeerMcp = () => {
       return;
     }
 
-    setSignalingState('connecting');
-    const socket = new WebSocket(`${getSocketBaseUrl()}/ws/mcp/${session.session_id}/${localPeerId}`);
-    websocketRef.current = socket;
-
-    socket.onopen = () => {
-      setSignalingState('ready');
-      appendTimeline('system', 'Signaling connected', 'Using Django Channels only for SDP and ICE exchange');
-      publishPeerPresence(role);
-    };
-
-    socket.onmessage = (event) => {
-      const payload = JSON.parse(event.data) as TMcpSignalMessage | (TMcpSessionResponse & { type: 'peer_snapshot' });
-      if (payload.type === 'signal') {
-        handleSignalMessage(payload);
-        return;
-      }
-
-      const peers = payload.peers.filter((peer) => peer.peer_id !== localPeerId);
-      setSession((previous) =>
-        previous
-          ? {
-              ...previous,
-              peer_count: payload.peer_count,
-              peers: payload.peers
-            }
-          : null
-      );
-      setRemotePeers(peers);
-
-      const providerPeer = peers.find((peer) => peer.role === 'provider');
-      if (providerPeer?.tools?.length) {
-        setRemoteTools(providerPeer.tools);
-        const activeTool = providerPeer.tools.find((tool) => tool.name === selectedToolRef.current) || providerPeer.tools[0];
-        if (activeTool && activeTool.name !== selectedToolRef.current) {
-          setSelectedTool(activeTool.name);
-          setParametersText(JSON.stringify(activeTool.parameters, null, 2));
-        }
-      }
-
-      if (role === 'client' && providerPeer && !peerConnectionRef.current && !offerStartedRef.current) {
-        offerStartedRef.current = true;
-        void startOffer(providerPeer.peer_id);
-      }
-
-      if (!providerPeer && role === 'client') {
-        resetPeerConnection();
-      }
-    };
-
-    socket.onclose = () => {
-      setSignalingState('closed');
-    };
+    const client = buildClient(role);
+    clientRef.current = client;
+    void client.connect(session.session_id);
 
     return () => {
-      socket.close();
-      websocketRef.current = null;
-      resetPeerConnection();
-      setRemotePeers([]);
+      client.disconnect();
+      if (clientRef.current === client) {
+        clientRef.current = null;
+      }
     };
-  }, [appendTimeline, handleSignalMessage, localPeerId, publishPeerPresence, resetPeerConnection, role, session?.session_id, startOffer]);
+  }, [buildClient, role, session?.session_id]);
+
+  useEffect(() => {
+    if (role === 'provider') {
+      setRemoteTools(LOCAL_MCP_TOOLS);
+    }
+
+    clientRef.current?.updateIdentity({
+      peerName,
+      role,
+      tools: role === 'provider' ? LOCAL_MCP_TOOLS : []
+    });
+  }, [peerName, role]);
 
   useEffect(() => {
     if (role === 'provider') {
@@ -464,20 +247,20 @@ export const usePeerMcp = () => {
     setIsBusy(true);
     setTimeline([]);
     setLastResult('');
-    resetPeerConnection();
+    resetClient();
     const nextSession = await createMcpSession();
     if (nextSession) {
       setRole('provider');
       setSession(nextSession);
       setSessionInput(nextSession.session_id);
       setRemotePeers([]);
-      appendTimeline('system', 'Provider session created', `Share code ${nextSession.session_id.toUpperCase()} with an AI client`);
+      setRemoteTools(LOCAL_MCP_TOOLS);
       toast.success('Provider session created');
     } else {
       toast.error('Unable to create an MCP session');
     }
     setIsBusy(false);
-  }, [appendTimeline, createMcpSession, resetPeerConnection]);
+  }, [createMcpSession, resetClient]);
 
   const joinClientSession = useCallback(async () => {
     if (!sessionInput.trim()) {
@@ -488,7 +271,7 @@ export const usePeerMcp = () => {
     setIsBusy(true);
     setTimeline([]);
     setLastResult('');
-    resetPeerConnection();
+    resetClient();
     const existingSession = await getMcpSession(sessionInput.trim());
     if (existingSession) {
       setRole('client');
@@ -497,36 +280,25 @@ export const usePeerMcp = () => {
       setRemotePeers(existingSession.peers.filter((peer) => peer.peer_id !== localPeerId));
       const providerPeer = existingSession.peers.find((peer) => peer.role === 'provider');
       setRemoteTools(providerPeer?.tools || []);
-      appendTimeline('system', 'Client joined session', `Preparing a direct link to ${sessionInput.trim().toUpperCase()}`);
+      if (providerPeer?.tools?.length) {
+        syncSelectedTool(providerPeer.tools);
+      }
       toast.success('Joined signaling session');
     } else {
       toast.error('Session not found');
     }
     setIsBusy(false);
-  }, [appendTimeline, getMcpSession, localPeerId, resetPeerConnection, sessionInput]);
+  }, [getMcpSession, localPeerId, resetClient, sessionInput, syncSelectedTool]);
 
   const invokeTool = useCallback(() => {
-    if (!dataChannelRef.current || dataChannelRef.current.readyState !== 'open') {
-      toast.error('The peer-to-peer channel is not ready yet');
-      return;
-    }
-
     try {
       const parameters = JSON.parse(parametersText) as Record<string, unknown>;
-      const requestId = uuidv4();
-      const message: TMcpMessage = {
-        type: 'tool_call',
-        requestId,
-        tool: selectedTool,
-        parameters
-      };
-      dataChannelRef.current.send(JSON.stringify(message));
-      appendTimeline('outbound', `Tool call • ${selectedTool}`, JSON.stringify(parameters, null, 2));
+      clientRef.current?.sendToolCall(selectedTool, parameters);
       setLastResult('Waiting for remote peer response...');
     } catch (error) {
-      toast.error('Parameters must be valid JSON');
+      toast.error(error instanceof Error ? error.message : 'Parameters must be valid JSON');
     }
-  }, [appendTimeline, parametersText, selectedTool]);
+  }, [parametersText, selectedTool]);
 
   const copySessionCode = useCallback(async () => {
     if (!session?.session_id) {
@@ -542,17 +314,14 @@ export const usePeerMcp = () => {
   }, [session?.session_id]);
 
   const closeSession = useCallback(() => {
-    websocketRef.current?.close();
-    websocketRef.current = null;
-    resetPeerConnection();
+    resetClient();
     setSession(null);
     setRemotePeers([]);
-    setRemoteTools([]);
+    setRemoteTools(role === 'provider' ? LOCAL_MCP_TOOLS : []);
     setTimeline([]);
     setLastResult('');
-    setSignalingState('idle');
     toast.info('Session cleared');
-  }, [resetPeerConnection]);
+  }, [resetClient, role]);
 
   return {
     channelState,

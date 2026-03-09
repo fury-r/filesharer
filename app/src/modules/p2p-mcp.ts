@@ -1,3 +1,4 @@
+export { FilesharerP2PMcpClient } from '../../../modules/filesharer-p2p-mcp/src';
 export type {
   TMcpClientIdentity,
   TMcpClientOptions,
@@ -11,4 +12,4 @@ export type {
   TMcpSignalPayload,
   TMcpTimelineEvent,
   TMcpTool
-} from '../modules/p2p-mcp';
+} from '../../../modules/filesharer-p2p-mcp/src';

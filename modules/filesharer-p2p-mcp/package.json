@@ -1,0 +1,29 @@
+{
+  "name": "@filesharer/p2p-mcp",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Reusable browser-side WebRTC transport for peer-to-peer MCP sessions.",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "keywords": [
+    "mcp",
+    "webrtc",
+    "p2p",
+    "model-context-protocol"
+  ],
+  "license": "MIT"
+}

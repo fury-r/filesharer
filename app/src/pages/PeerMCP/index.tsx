@@ -107,6 +107,17 @@ const PeerMCP = () => {
               Use two browser windows: create a provider session on one side, then join the same session as an AI client on the other.
             </p>
           </div>
+
+          <div className="mt-5 rounded-2xl border border-emerald-400/20 bg-emerald-500/10 p-4">
+            <p className="text-xs uppercase tracking-[0.3em] text-emerald-200/80">Reusable module</p>
+            <p className="mt-2 text-sm text-slate-200">
+              The transport layer is also available as the <span className="font-mono text-emerald-200">@filesharer/p2p-mcp</span> TypeScript
+              module from this repository.
+            </p>
+            <pre className="mt-3 overflow-auto rounded-xl bg-black/30 p-3 text-xs text-emerald-100">
+              npm run build:mcp-module
+            </pre>
+          </div>
         </div>
       </div>
 
