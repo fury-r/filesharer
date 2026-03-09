@@ -67,10 +67,8 @@ class MCPSignalingConsumer(AsyncWebsocketConsumer):
 
     async def relay_signal(self, event):
         target_peer_id = event["payload"].get("target_peer_id")
-        if target_peer_id and target_peer_id != self.peer_id:
-            return
-
-        await self.send(text_data=json.dumps(event["payload"]))
+        if target_peer_id == self.peer_id:
+            await self.send(text_data=json.dumps(event["payload"]))
 
     async def peer_snapshot_event(self, event):
         await self.send(

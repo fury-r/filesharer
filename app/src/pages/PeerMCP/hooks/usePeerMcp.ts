@@ -42,6 +42,9 @@ const TOOL_PARAMETER_MAP = LOCAL_MCP_TOOLS.reduce<Record<string, string>>((acc, 
   acc[tool.name] = JSON.stringify(tool.parameters, null, 2);
   return acc;
 }, {});
+const MAX_TIMELINE_ENTRIES = 16;
+const MAX_LOG_ENTRIES = 10;
+const MS_PER_MINUTE = 60_000;
 
 const getSocketBaseUrl = () => {
   const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
@@ -56,7 +59,7 @@ const createTimelineEvent = (direction: TMcpTimelineEvent['direction'], title: s
   timestamp: new Date().toLocaleTimeString()
 });
 
-const clampTimeline = (events: TMcpTimelineEvent[]) => events.slice(-16);
+const clampTimeline = (events: TMcpTimelineEvent[]) => events.slice(-MAX_TIMELINE_ENTRIES);
 
 export const usePeerMcp = () => {
   const { createMcpSession, getMcpSession } = useService();
@@ -81,10 +84,23 @@ export const usePeerMcp = () => {
   const remotePeerIdRef = useRef<string>();
   const offerStartedRef = useRef(false);
   const queuedIceCandidatesRef = useRef<RTCIceCandidateInit[]>([]);
+  const roleRef = useRef(role);
+  const peerNameRef = useRef(peerName);
+  const sessionIdRef = useRef(session?.session_id || '');
+  const remotePeerCountRef = useRef(remotePeers.length);
+  const selectedToolRef = useRef(selectedTool);
 
   const appendTimeline = useCallback((direction: TMcpTimelineEvent['direction'], title: string, detail: string) => {
     setTimeline((previous) => clampTimeline([...previous, createTimelineEvent(direction, title, detail)]));
   }, []);
+
+  useEffect(() => {
+    roleRef.current = role;
+    peerNameRef.current = peerName;
+    sessionIdRef.current = session?.session_id || '';
+    remotePeerCountRef.current = remotePeers.length;
+    selectedToolRef.current = selectedTool;
+  }, [peerName, remotePeers.length, role, selectedTool, session?.session_id]);
 
   const resetPeerConnection = useCallback(() => {
     if (dataChannelRef.current) {
@@ -98,23 +114,20 @@ export const usePeerMcp = () => {
     remotePeerIdRef.current = undefined;
     offerStartedRef.current = false;
     queuedIceCandidatesRef.current = [];
-    setWebrtcState(session ? 'signaling-ready' : 'idle');
+    setWebrtcState('idle');
     setChannelState('idle');
-  }, [session]);
+  }, []);
 
-  const publishPeerPresence = useCallback(
-    (nextRole: TMcpRole) => {
-      websocketRef.current?.send(
-        JSON.stringify({
-          type: 'peer_announce',
-          name: peerName.trim() || (nextRole === 'provider' ? 'Edge Gateway' : 'AI Client'),
-          role: nextRole,
-          tools: nextRole === 'provider' ? LOCAL_MCP_TOOLS : []
-        })
-      );
-    },
-    [peerName]
-  );
+  const publishPeerPresence = useCallback((nextRole: TMcpRole) => {
+    websocketRef.current?.send(
+      JSON.stringify({
+        type: 'peer_announce',
+        name: peerNameRef.current.trim() || (nextRole === 'provider' ? 'Edge Gateway' : 'AI Client'),
+        role: nextRole,
+        tools: nextRole === 'provider' ? LOCAL_MCP_TOOLS : []
+      })
+    );
+  }, []);
 
   const sendSignalMessage = useCallback((targetPeerId: string, signalType: TMcpSignalMessage['signal_type'], payload: TMcpSignalMessage['payload']) => {
     websocketRef.current?.send(
@@ -127,23 +140,27 @@ export const usePeerMcp = () => {
     );
   }, []);
 
-  const getProviderResult = useCallback(
-    (toolName: string, parameters: Record<string, unknown>) => {
+  // These refs let the provider answer tool calls with the latest peer/session data
+  // without forcing the WebRTC event handlers to re-subscribe on every UI state change.
+  const getProviderResult = useCallback((toolName: string, parameters: Record<string, unknown>) => {
+      const activePeerName = peerNameRef.current;
+      const activeSessionId = sessionIdRef.current;
+      const activePeerCount = remotePeerCountRef.current + 1;
       const deviceId = String(parameters.device_id || 'edge-gateway-01');
       switch (toolName) {
         case 'get_device_status':
           return {
             device_id: deviceId,
-            session_id: session?.session_id,
-            peer: peerName,
+            session_id: activeSessionId,
+            peer: activePeerName,
             transport: 'webrtc-datachannel',
             status: 'healthy',
-            active_peers: remotePeers.length + 1,
+            active_peers: activePeerCount,
             last_seen: new Date().toISOString()
           };
         case 'get_recent_logs':
-          return Array.from({ length: Math.min(Number(parameters.limit) || 5, 10) }, (_, index) => ({
-            timestamp: new Date(Date.now() - index * 60_000).toISOString(),
+          return Array.from({ length: Math.min(Math.max(parseInt(String(parameters.limit || 5), 10) || 5, 1), MAX_LOG_ENTRIES) }, (_, index) => ({
+            timestamp: new Date(Date.now() - index * MS_PER_MINUTE).toISOString(),
             level: index === 0 ? 'warning' : 'info',
             message: `${deviceId}: telemetry window ${index + 1} stayed on the peer device`
           }));
@@ -170,7 +187,7 @@ export const usePeerMcp = () => {
           };
       }
     },
-    [peerName, remotePeers.length, session?.session_id]
+    []
   );
 
   const handleDataChannelMessage = useCallback(
@@ -189,7 +206,7 @@ export const usePeerMcp = () => {
 
       if (message.type === 'tool_call') {
         appendTimeline('inbound', `Tool call • ${message.tool}`, JSON.stringify(message.parameters, null, 2));
-        if (role !== 'provider' || !dataChannelRef.current) {
+        if (roleRef.current !== 'provider' || !dataChannelRef.current) {
           return;
         }
 
@@ -212,7 +229,7 @@ export const usePeerMcp = () => {
         appendTimeline('inbound', `Tool result • ${message.tool}`, message.ok ? 'Received a successful peer response' : 'Peer returned an error');
       }
     },
-    [appendTimeline, getProviderResult, role]
+    [appendTimeline, getProviderResult]
   );
 
   const attachDataChannel = useCallback(
@@ -223,12 +240,12 @@ export const usePeerMcp = () => {
       channel.onopen = () => {
         setChannelState('open');
         appendTimeline('system', 'Data channel open', 'MCP messages are now moving peer-to-peer over WebRTC');
-        if (role === 'provider') {
+        if (roleRef.current === 'provider') {
           channel.send(
             JSON.stringify({
               type: 'tool_catalog',
               tools: LOCAL_MCP_TOOLS,
-              peerName
+              peerName: peerNameRef.current
             })
           );
         }
@@ -247,7 +264,7 @@ export const usePeerMcp = () => {
         handleDataChannelMessage(event.data);
       };
     },
-    [appendTimeline, handleDataChannelMessage, peerName, role]
+    [appendTimeline, handleDataChannelMessage]
   );
 
   const applyQueuedIceCandidates = useCallback(async () => {
@@ -401,13 +418,15 @@ export const usePeerMcp = () => {
       const providerPeer = peers.find((peer) => peer.role === 'provider');
       if (providerPeer?.tools?.length) {
         setRemoteTools(providerPeer.tools);
-        if (!TOOL_PARAMETER_MAP[selectedTool]) {
-          setSelectedTool(providerPeer.tools[0].name);
-          setParametersText(JSON.stringify(providerPeer.tools[0].parameters, null, 2));
+        const activeTool = providerPeer.tools.find((tool) => tool.name === selectedToolRef.current) || providerPeer.tools[0];
+        if (activeTool && activeTool.name !== selectedToolRef.current) {
+          setSelectedTool(activeTool.name);
+          setParametersText(JSON.stringify(activeTool.parameters, null, 2));
         }
       }
 
       if (role === 'client' && providerPeer && !peerConnectionRef.current && !offerStartedRef.current) {
+        offerStartedRef.current = true;
         void startOffer(providerPeer.peer_id);
       }
 
@@ -426,7 +445,7 @@ export const usePeerMcp = () => {
       resetPeerConnection();
       setRemotePeers([]);
     };
-  }, [appendTimeline, handleSignalMessage, localPeerId, publishPeerPresence, resetPeerConnection, role, selectedTool, session?.session_id, startOffer]);
+  }, [appendTimeline, handleSignalMessage, localPeerId, publishPeerPresence, resetPeerConnection, role, session?.session_id, startOffer]);
 
   useEffect(() => {
     if (role === 'provider') {

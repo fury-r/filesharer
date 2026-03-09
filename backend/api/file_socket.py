@@ -1,14 +1,10 @@
 import json
 import shutil
-from api.models import Upload
 from channels.generic.websocket import AsyncWebsocketConsumer
-import django
-import os
+from api.models import Upload
 from api import PATH, users
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'mysite.settings')
-django.setup()
 class FileUpload(AsyncWebsocketConsumer):
     session_hash=""
     async def connect(self):
