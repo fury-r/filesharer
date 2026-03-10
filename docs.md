@@ -1,6 +1,6 @@
 # P2P MCP transport guide
 
-This guide explains how to document and use the peer-to-peer MCP transport that lives in `modules/mcp-webrtc-transport`.
+This guide explains how to document and use the peer-to-peer MCP transport that lives in `modules/filesharer-p2p-mcp`.
 
 ## Screenshot assets
 
@@ -38,82 +38,82 @@ For package pages or any README renderer that needs absolute URLs, use the raw G
 ### Provider peer
 
 ```ts
-import { FilesharerP2PMcpClient, TMcpTool } from "@fury-r/mcp-webrtc-transport";
+import { FilesharerP2PMcpClient, TMcpTool } from '@fury-r/mcp-webrtc-transport';
 
 const tools: TMcpTool[] = [
   {
-    name: "get_device_status",
-    description: "Return the current device health summary.",
-    parameters: { device_id: "edge-gateway-01" },
+    name: 'get_device_status',
+    description: 'Return the current device health summary.',
+    parameters: { device_id: 'edge-gateway-01' }
   },
   {
-    name: "get_recent_logs",
-    description: "Read a few recent logs from the edge device.",
-    parameters: { device_id: "thermostat_4", limit: 5 },
-  },
+    name: 'get_recent_logs',
+    description: 'Read a few recent logs from the edge device.',
+    parameters: { device_id: 'thermostat_4', limit: 5 }
+  }
 ];
 
 const provider = new FilesharerP2PMcpClient({
-  signalingBaseUrl: "ws://localhost:8001",
+  signalingBaseUrl: 'ws://localhost:8001',
   identity: {
-    peerName: "Edge Gateway",
-    role: "provider",
-    tools,
+    peerName: 'Edge Gateway',
+    role: 'provider',
+    tools
   },
   onConnectionStateChange: (state) => {
-    console.log("connection state", state);
+    console.log('connection state', state);
   },
   onTimelineEvent: (event) => {
     console.log(`[${event.direction}] ${event.title}`, event.detail);
   },
   toolCallHandler: async (message) => {
     switch (message.tool) {
-      case "get_device_status":
+      case 'get_device_status':
         return {
           device_id: message.parameters.device_id,
-          status: "healthy",
-          transport: "webrtc-datachannel",
+          status: 'healthy',
+          transport: 'webrtc-datachannel'
         };
-      case "get_recent_logs":
+      case 'get_recent_logs':
         return [
           {
             timestamp: new Date().toISOString(),
-            level: "info",
-            message: "thermostat_4: telemetry stayed on the peer device",
-          },
+            level: 'info',
+            message: 'thermostat_4: telemetry stayed on the peer device'
+          }
         ];
       default:
         return { error: `Unknown tool: ${message.tool}` };
     }
-  },
+  }
 });
 
-await provider.connect("24f5e189");
+await provider.connect('24f5e189');
 ```
 
 ### Client peer
 
 ```ts
-import { FilesharerP2PMcpClient } from "@fury-r/mcp-webrtc-transport";
+import { FilesharerP2PMcpClient } from '@fury-r/mcp-webrtc-transport';
 
 const client = new FilesharerP2PMcpClient({
-  signalingBaseUrl: "ws://localhost:8001",
+  signalingBaseUrl: 'ws://localhost:8001',
   identity: {
-    peerName: "AI Client",
-    role: "client",
+    peerName: 'AI Client',
+    role: 'client'
   },
   onToolCatalog: (message) => {
-    console.log("available tools", message.tools);
+    console.log('available tools', message.tools);
   },
   onToolResult: (message) => {
-    console.log("tool result", message.result);
-  },
+    console.log('tool result', message.result);
+  }
 });
 
-await client.connect("24f5e189");
+await client.connect('24f5e189');
 
-client.sendToolCall("get_device_status", {
-  device_id: "edge-gateway-01",
+client.sendToolCall('get_device_status', {
+  device_id: 'edge-gateway-01'
 });
 ```
 

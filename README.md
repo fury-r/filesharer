@@ -6,11 +6,11 @@ Monorepo for a WebRTC-based MCP transport demo and the reusable `@fury-r/mcp-web
 
 - `app/` — React + Vite frontend with the P2P MCP demo UI
 - `backend/` — Django + Channels signaling backend
-- `modules/mcp-webrtc-transport/` — reusable browser-side TypeScript package
+- `modules/filesharer-p2p-mcp/` — reusable browser-side TypeScript package
 
 ## P2P MCP transport
 
-The reusable MCP transport in `modules/mcp-webrtc-transport` is designed for:
+The reusable MCP transport in `modules/filesharer-p2p-mcp` is designed for:
 
 - peer discovery through a signaling websocket
 - SDP offer / answer exchange
@@ -29,37 +29,37 @@ The reusable MCP transport in `modules/mcp-webrtc-transport` is designed for:
 #### TypeScript
 
 ```ts
-import { FilesharerP2PMcpClient, TMcpTool } from "@fury-r/mcp-webrtc-transport";
+import { FilesharerP2PMcpClient, TMcpTool } from '@fury-r/mcp-webrtc-transport';
 
 const tools: TMcpTool[] = [
   {
-    name: "get_device_status",
-    description: "Return the current device health summary.",
-    parameters: { device_id: "edge-gateway-01" },
-  },
+    name: 'get_device_status',
+    description: 'Return the current device health summary.',
+    parameters: { device_id: 'edge-gateway-01' }
+  }
 ];
 
 const client = new FilesharerP2PMcpClient({
-  signalingBaseUrl: "ws://localhost:8001",
+  signalingBaseUrl: 'ws://localhost:8001',
   identity: {
-    peerName: "Edge Gateway",
-    role: "provider",
-    tools,
+    peerName: 'Edge Gateway',
+    role: 'provider',
+    tools
   },
   toolCallHandler: async (message) => {
-    if (message.tool === "get_device_status") {
+    if (message.tool === 'get_device_status') {
       return {
-        device_id: "edge-gateway-01",
-        status: "healthy",
-        transport: "webrtc-datachannel",
+        device_id: 'edge-gateway-01',
+        status: 'healthy',
+        transport: 'webrtc-datachannel'
       };
     }
 
     return { error: `Unknown tool: ${message.tool}` };
-  },
+  }
 });
 
-await client.connect("24f5e189");
+await client.connect('24f5e189');
 ```
 
 #### Python interoperability
@@ -117,7 +117,7 @@ The npm-publishable package in this repository is:
 It lives in:
 
 ```bash
-modules/mcp-webrtc-transport
+modules/filesharer-p2p-mcp
 ```
 
 The repository includes an automatic release-based publish workflow at:
@@ -129,7 +129,7 @@ The repository includes an automatic release-based publish workflow at:
 ## Additional documentation
 
 - [`docs.md`](./docs.md) — screenshot usage and expanded TS/Python guidance
-- [`modules/mcp-webrtc-transport/README.md`](./modules/mcp-webrtc-transport/README.md) — package-focused README
+- [`modules/filesharer-p2p-mcp/README.md`](./modules/filesharer-p2p-mcp/README.md) — package-focused README
 
 ## License
 
