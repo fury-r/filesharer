@@ -46,43 +46,43 @@ npm run build:mcp-module
 The compiled package is emitted to:
 
 ```bash
-modules/mcp-webrtc-transport/dist
+modules/filesharer-p2p-mcp/dist
 ```
 
 ## TypeScript example
 
 ```ts
-import { FilesharerP2PMcpClient, TMcpTool } from "@fury-r/mcp-webrtc-transport";
+import { FilesharerP2PMcpClient, TMcpTool } from '@fury-r/mcp-webrtc-transport';
 
 const tools: TMcpTool[] = [
   {
-    name: "get_device_status",
-    description: "Return the current device health summary.",
-    parameters: { device_id: "edge-gateway-01" },
-  },
+    name: 'get_device_status',
+    description: 'Return the current device health summary.',
+    parameters: { device_id: 'edge-gateway-01' }
+  }
 ];
 
 const client = new FilesharerP2PMcpClient({
-  signalingBaseUrl: "ws://localhost:8001",
+  signalingBaseUrl: 'ws://localhost:8001',
   identity: {
-    peerName: "Edge Gateway",
-    role: "provider",
-    tools,
+    peerName: 'Edge Gateway',
+    role: 'provider',
+    tools
   },
   toolCallHandler: async (message) => {
-    if (message.tool === "get_device_status") {
+    if (message.tool === 'get_device_status') {
       return {
-        device_id: "edge-gateway-01",
-        status: "healthy",
-        transport: "webrtc-datachannel",
+        device_id: 'edge-gateway-01',
+        status: 'healthy',
+        transport: 'webrtc-datachannel'
       };
     }
 
     return { error: `Unknown tool: ${message.tool}` };
-  },
+  }
 });
 
-await client.connect("24f5e189");
+await client.connect('24f5e189');
 ```
 
 ## Python interoperability example

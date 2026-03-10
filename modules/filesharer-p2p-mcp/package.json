@@ -9,7 +9,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/fury-r/mcp-webrtc-transport.git",
-    "directory": "modules/mcp-webrtc-transport"
+    "directory": "modules/filesharer-p2p-mcp"
   },
   "homepage": "https://github.com/fury-r/mcp-webrtc-transport",
   "bugs": {

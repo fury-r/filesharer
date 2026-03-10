@@ -1,58 +1,31 @@
-name: Publish MCP Module to npm
+name: Publish P2P MCP Package
 
 on:
-  push:
-    branches:
-      - "master"
+  release:
+    types: [published]
   workflow_dispatch:
 
 permissions:
-  contents: write
-  id-token: write
-
-env:
-  MODULE_DIR: modules/mcp-webrtc-transport
+  contents: read
 
 jobs:
   publish-p2p-mcp:
-    if: github.event_name == 'workflow_dispatch' || github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
-      - name: Configure Git identity
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 18.x
           registry-url: https://registry.npmjs.org
           cache: npm
-          cache-dependency-path: ${{ env.MODULE_DIR }}/package-lock.json
+          cache-dependency-path: modules/filesharer-p2p-mcp/package-lock.json
       - name: Install module dependencies
         run: npm ci
-        working-directory: ./${{ env.MODULE_DIR }}
-      - name: Bump module version and create tag
-        id: bump
-        run: |
-          TAG=$(npm version patch -m "chore(release): %s [skip ci]")
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
-        working-directory: ./${{ env.MODULE_DIR }}
+        working-directory: ./modules/filesharer-p2p-mcp
       - name: Publish package
-        run: npm publish --provenance --access public
-        working-directory: ./${{ env.MODULE_DIR }}
+        run: npm publish
+        working-directory: ./modules/filesharer-p2p-mcp
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      - name: Push release commit and tag
-        run: |
-          git push origin HEAD:${{ github.ref_name }}
-          git push origin ${{ steps.bump.outputs.tag }}
-      - name: Create GitHub release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ steps.bump.outputs.tag }}
-          name: ${{ steps.bump.outputs.tag }}
-          generate_release_notes: true
