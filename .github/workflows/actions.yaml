@@ -1,4 +1,4 @@
-name: File Sharer
+name: P2P MCP App Checks
 
 on:
   push:
