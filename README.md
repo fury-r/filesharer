@@ -65,7 +65,7 @@ await client.connect('24f5e189');
 #### Python interoperability
 
 ```py
-def handle_tool_call(message: dict) -> dict:
+async def handle_tool_call(message: dict) -> dict:
     if message["tool"] == "get_device_status":
         return {
             "device_id": message["parameters"].get("device_id", "edge-gateway-01"),
