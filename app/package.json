@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "build:mcp-module": "tsc -p ../modules/filesharer-p2p-mcp/tsconfig.json",
+    "build:mcp-module": "tsc -p ../modules/mcp-webrtc-transport/tsconfig.json",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "fix-lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0 --fix",
     "preview": "vite preview"
