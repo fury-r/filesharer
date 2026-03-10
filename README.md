@@ -84,8 +84,57 @@ The FileShare Web Application is a platform built to facilitate easy sharing of 
 ## Contributors
 - Rajeev Dessai - Full Stack Developer
 
+## Package Publishing
+
+This repository now makes the most sense as a monorepo with two different roles:
+
+- `app/` and `backend/` are the deployable FileShare web application
+- `modules/filesharer-p2p-mcp/` is the reusable npm package
+
+### npm
+
+The reusable package that is ready to publish to npm is:
+
+- `@filesharer/p2p-mcp`
+
+It lives in:
+
+```bash
+modules/filesharer-p2p-mcp
+```
+
+Build it locally with:
+
+```bash
+cd /home/runner/work/filesharer/filesharer/modules/filesharer-p2p-mcp
+npm install
+npm run build
+```
+
+The repository also includes a manual GitHub Actions workflow at:
+
+```bash
+.github/workflows/npm-publish.yaml
+```
+
+This workflow publishes `@filesharer/p2p-mcp` when triggered manually and requires an `NPM_TOKEN` repository secret.
+
+### PyPI
+
+The current `backend/` directory is a Django application, not a reusable Python package yet. That means the repository structure is fine for application development, but it is not a clean PyPI target as-is.
+
+If you want a PyPI package, the recommended next step is to extract one of these into a separate Python package with its own `pyproject.toml`:
+
+- a reusable Python client SDK for the FileShare or MCP APIs
+- a packaged backend service/CLI with a clearly defined install entrypoint
+
+In other words:
+
+- **npm publish:** the repo already makes sense with only small metadata/workflow changes
+- **PyPI publish:** the repo should be changed further by creating a dedicated Python package instead of publishing the current Django project directly
+
 ## License
-This project is licensed under the [License Name] License - see the [LICENSE.md](link-to-license-file) file for details.
+This project is licensed under the Apache 2.0 License - see `/home/runner/work/filesharer/filesharer/LICENSE` for details.
 
 ## Contact
 For any inquiries or issues, please contact @fury-r.

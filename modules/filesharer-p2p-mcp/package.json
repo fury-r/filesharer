@@ -6,6 +6,16 @@
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fury-r/filesharer.git",
+    "directory": "modules/filesharer-p2p-mcp"
+  },
+  "homepage": "https://github.com/fury-r/filesharer/tree/master/modules/filesharer-p2p-mcp",
+  "bugs": {
+    "url": "https://github.com/fury-r/filesharer/issues"
+  },
+  "author": "fury-r",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -17,7 +27,8 @@
     "README.md"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json"
+    "build": "tsc -p tsconfig.json",
+    "prepublishOnly": "npm run build"
   },
   "keywords": [
     "mcp",
@@ -25,5 +36,11 @@
     "p2p",
     "model-context-protocol"
   ],
-  "license": "MIT"
+  "license": "Apache-2.0",
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "typescript": "^5.2.2"
+  }
 }
