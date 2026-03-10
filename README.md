@@ -4,7 +4,7 @@ Monorepo for a WebRTC-based MCP transport demo and the reusable `@filesharer/p2p
 
 ## Repository layout
 
-- `app/` — React + Vite frontend with the PeerMCP demo UI
+- `app/` — React + Vite frontend with the P2P MCP demo UI
 - `backend/` — Django + Channels signaling backend
 - `modules/filesharer-p2p-mcp/` — reusable browser-side TypeScript package
 
@@ -103,6 +103,7 @@ npm run dev
 ### Build the reusable package
 
 ```bash
+# Build from the frontend workspace used by this repository.
 cd app
 npm run build:mcp-module
 ```
