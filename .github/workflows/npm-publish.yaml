@@ -36,43 +36,10 @@ jobs:
       - name: Install module dependencies
         run: npm ci
         working-directory: ./${{ env.MODULE_DIR }}
-      - name: Resolve next unpublished version
-        id: resolve_version
-        run: |
-          PACKAGE_NAME=$(node -p "require('./package.json').name")
-          LOCAL_VERSION=$(node -p "require('./package.json').version")
-          PUBLISHED_VERSION=$(npm view "$PACKAGE_NAME" version 2>/dev/null || true)
-
-          NEXT_VERSION=$(node -e "
-            const local = process.argv[1];
-            const published = process.argv[2] || '';
-
-            const parse = (v) => v.split('.').map((x) => Number.parseInt(x, 10));
-            const cmp = (a, b) => {
-              for (let i = 0; i < 3; i += 1) {
-                if (a[i] > b[i]) return 1;
-                if (a[i] < b[i]) return -1;
-              }
-              return 0;
-            };
-            const incPatch = (v) => {
-              const [major, minor, patch] = parse(v);
-              return `${major}.${minor}.${patch + 1}`;
-            };
-
-            const base = published && cmp(parse(published), parse(local)) > 0 ? published : local;
-            process.stdout.write(incPatch(base));
-          " "$LOCAL_VERSION" "$PUBLISHED_VERSION")
-
-          echo "next_version=$NEXT_VERSION" >> "$GITHUB_OUTPUT"
-          echo "package_name=$PACKAGE_NAME" >> "$GITHUB_OUTPUT"
-          echo "local_version=$LOCAL_VERSION" >> "$GITHUB_OUTPUT"
-          echo "published_version=$PUBLISHED_VERSION" >> "$GITHUB_OUTPUT"
-        working-directory: ./${{ env.MODULE_DIR }}
       - name: Bump module version and create tag
         id: bump
         run: |
-          TAG=$(npm version "${{ steps.resolve_version.outputs.next_version }}" --git-tag-version=true -m "chore(release): %s [skip ci]")
+          TAG=$(npm version patch --git-tag-version=true -m "chore(release): %s [skip ci]")
 
           # Some environments may not create the tag even when version bump succeeds.
           # Ensure the local tag exists so the push step cannot fail with missing refspec.
