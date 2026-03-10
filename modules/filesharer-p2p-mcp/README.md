@@ -1,4 +1,4 @@
-# `mcp-webrtc-transport`
+# `@fury-r/mcp-webrtc-transport`
 
 Reusable browser-side TypeScript module for peer-to-peer MCP sessions over WebRTC.
 
@@ -52,7 +52,7 @@ modules/filesharer-p2p-mcp/dist
 ## TypeScript example
 
 ```ts
-import { FilesharerP2PMcpClient, TMcpTool } from 'mcp-webrtc-transport';
+import { FilesharerP2PMcpClient, TMcpTool } from '@fury-r/mcp-webrtc-transport';
 
 const tools: TMcpTool[] = [
   {

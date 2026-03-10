@@ -10,16 +10,17 @@ const docsGuide = readText('../../../docs.md');
 const moduleReadme = readText('../README.md');
 const peerMcpPage = readText('../../../app/src/pages/PeerMCP/index.tsx');
 
-test('package metadata uses the repo-based package name', () => {
-  assert.equal(packageJson.name, 'mcp-webrtc-transport');
+test('package metadata uses the fury-r scoped package name', () => {
+  assert.equal(packageJson.name, '@fury-r/mcp-webrtc-transport');
   assert.equal(packageJson.repository.url, 'git+https://github.com/fury-r/mcp-webrtc-transport.git');
   assert.equal(packageJson.homepage, 'https://github.com/fury-r/mcp-webrtc-transport');
   assert.equal(packageJson.bugs.url, 'https://github.com/fury-r/mcp-webrtc-transport/issues');
 });
 
-test('docs and UI references no longer use the old fileshare package name', () => {
+test('docs and UI references use the fury-r scoped package name instead of older package names', () => {
   for (const fileContents of [rootReadme, docsGuide, moduleReadme, peerMcpPage]) {
-    assert.match(fileContents, /mcp-webrtc-transport/);
+    assert.match(fileContents, /@fury-r\/mcp-webrtc-transport/);
     assert.doesNotMatch(fileContents, /@filesharer\/p2p-mcp/);
+    assert.doesNotMatch(fileContents, /from 'mcp-webrtc-transport'/);
   }
 });
