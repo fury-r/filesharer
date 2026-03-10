@@ -106,7 +106,7 @@ modules/filesharer-p2p-mcp
 Build it locally with:
 
 ```bash
-cd /home/runner/work/filesharer/filesharer/modules/filesharer-p2p-mcp
+cd modules/filesharer-p2p-mcp
 npm install
 npm run build
 ```
@@ -134,7 +134,7 @@ In other words:
 - **PyPI publish:** the repo should be changed further by creating a dedicated Python package instead of publishing the current Django project directly
 
 ## License
-This project is licensed under the Apache 2.0 License - see `/home/runner/work/filesharer/filesharer/LICENSE` for details.
+This project is licensed under the Apache 2.0 License - see `LICENSE` for details.
 
 ## Contact
 For any inquiries or issues, please contact @fury-r.

@@ -11,7 +11,7 @@
     "url": "git+https://github.com/fury-r/filesharer.git",
     "directory": "modules/filesharer-p2p-mcp"
   },
-  "homepage": "https://github.com/fury-r/filesharer/tree/master/modules/filesharer-p2p-mcp",
+  "homepage": "https://github.com/fury-r/filesharer",
   "bugs": {
     "url": "https://github.com/fury-r/filesharer/issues"
   },
@@ -36,11 +36,11 @@
     "p2p",
     "model-context-protocol"
   ],
-  "license": "Apache-2.0",
+  "license": "MIT",
   "publishConfig": {
     "access": "public"
   },
   "devDependencies": {
-    "typescript": "^5.2.2"
+    "typescript": "^5.9.3"
   }
 }
