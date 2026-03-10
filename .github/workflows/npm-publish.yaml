@@ -20,6 +20,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Configure Git identity
         run: |
           git config user.name "github-actions[bot]"
@@ -37,7 +39,14 @@ jobs:
       - name: Bump module version and create tag
         id: bump
         run: |
-          TAG=$(npm version patch -m "chore(release): %s [skip ci]")
+          TAG=$(npm version patch --git-tag-version=true -m "chore(release): %s [skip ci]")
+
+          # Some environments may not create the tag even when version bump succeeds.
+          # Ensure the local tag exists so the push step cannot fail with missing refspec.
+          if ! git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
+            git tag "${TAG}"
+          fi
+
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
         working-directory: ./${{ env.MODULE_DIR }}
@@ -49,7 +58,7 @@ jobs:
       - name: Push release commit and tag
         run: |
           git push origin HEAD:${{ github.ref_name }}
-          git push origin ${{ steps.bump.outputs.tag }}
+          git push origin refs/tags/${{ steps.bump.outputs.tag }}
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
