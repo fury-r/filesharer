@@ -1,9 +1,85 @@
 # FileShare Web Application
 
-
-
 ## Overview
 The FileShare Web Application is a platform built to facilitate easy sharing of files through file uploads and QR code generation. It utilizes React with TypeScript on the frontend and Django with Python on the backend. The app allows users to upload files, generate QR codes for those files, and share them effortlessly.
+
+This repository also includes the reusable `@filesharer/p2p-mcp` transport module for peer-to-peer MCP sessions over WebRTC.
+
+## P2P MCP Transport
+
+The reusable MCP transport in `modules/filesharer-p2p-mcp` is designed for:
+
+- browser-to-browser or browser-to-edge peer discovery
+- WebRTC negotiation through a signaling server
+- direct MCP tool calls over a WebRTC data channel
+- privacy-first, low-latency tool execution
+
+### Screenshots
+
+![Peer MCP overview](./docs/assets/peer-mcp-overview.png)
+
+![Peer MCP session setup](./docs/assets/peer-mcp-session-setup.png)
+
+### Quick snippets
+
+#### TypeScript
+
+```ts
+import { FilesharerP2PMcpClient, TMcpTool } from '@filesharer/p2p-mcp';
+
+const tools: TMcpTool[] = [
+  {
+    name: 'get_device_status',
+    description: 'Return the current device health summary.',
+    parameters: { device_id: 'edge-gateway-01' }
+  }
+];
+
+const client = new FilesharerP2PMcpClient({
+  signalingBaseUrl: 'ws://localhost:8001',
+  identity: {
+    peerName: 'Edge Gateway',
+    role: 'provider',
+    tools
+  },
+  toolCallHandler: async (message) => {
+    if (message.tool === 'get_device_status') {
+      return {
+        device_id: 'edge-gateway-01',
+        status: 'healthy',
+        transport: 'webrtc-datachannel'
+      };
+    }
+
+    return { error: `Unknown tool: ${message.tool}` };
+  }
+});
+
+await client.connect('24f5e189');
+```
+
+#### Python interoperability
+
+```py
+async def handle_tool_call(message: dict) -> dict:
+    if message["tool"] == "get_device_status":
+        return {
+            "device_id": message["parameters"].get("device_id", "edge-gateway-01"),
+            "status": "healthy",
+            "transport": "webrtc-datachannel",
+        }
+    return {"error": f"Unknown tool: {message['tool']}"}
+
+# This module is browser-side TypeScript, so Python typically interoperates by
+# implementing the same signaling contract plus a WebRTC data channel client.
+#
+# Signaling endpoints expected by the transport:
+# - GET /v1/mcp/session/
+# - GET /v1/mcp/session/<session_id>/
+# - ws://<host>/ws/mcp/<session_id>/<peer_id>
+```
+
+For a fuller guide, including screenshot URLs you can reuse in package READMEs and longer TypeScript/Python examples, see [`docs.md`](./docs.md).
 
 ## Features
 - **File Upload:** Users can easily upload files of various formats.

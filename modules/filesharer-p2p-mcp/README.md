@@ -2,6 +2,14 @@
 
 Reusable browser-side TypeScript module for peer-to-peer MCP sessions over WebRTC.
 
+## Screenshots
+
+> These screenshots are stored in the repository so they can also be reused from README files and package pages.
+
+![Peer MCP overview](https://raw.githubusercontent.com/fury-r/mcp-webrtc-transport/master/docs/assets/peer-mcp-overview.png)
+
+![Peer MCP session setup](https://raw.githubusercontent.com/fury-r/mcp-webrtc-transport/master/docs/assets/peer-mcp-session-setup.png)
+
 ## What it provides
 
 - peer discovery through a signaling websocket
@@ -41,7 +49,7 @@ The compiled package is emitted to:
 modules/filesharer-p2p-mcp/dist
 ```
 
-## Example
+## TypeScript example
 
 ```ts
 import { FilesharerP2PMcpClient, TMcpTool } from '@filesharer/p2p-mcp';
@@ -76,6 +84,48 @@ const client = new FilesharerP2PMcpClient({
 
 await client.connect('24f5e189');
 ```
+
+## Python interoperability example
+
+This package is browser-side TypeScript, so Python usage is typically an interoperability story rather than a direct package import. A Python peer can implement the same signaling contract and exchange the same MCP messages over a WebRTC data channel.
+
+```py
+import json
+
+SIGNALING_HTTP_BASE = "http://localhost:8001"
+SIGNALING_WS_BASE = "ws://localhost:8001"
+
+async def get_device_status(parameters: dict) -> dict:
+    return {
+        "device_id": parameters.get("device_id", "edge-gateway-01"),
+        "status": "healthy",
+        "transport": "webrtc-datachannel",
+    }
+
+async def handle_tool_call(raw_message: str) -> str:
+    message = json.loads(raw_message)
+    if message["type"] != "tool_call":
+        return json.dumps({"ok": False, "error": "unsupported_message"})
+
+    if message["tool"] == "get_device_status":
+        result = await get_device_status(message.get("parameters", {}))
+    else:
+        result = {"error": f"Unknown tool: {message['tool']}"}
+
+    return json.dumps(
+        {
+            "type": "tool_result",
+            "requestId": message["requestId"],
+            "tool": message["tool"],
+            "result": result,
+            "ok": "error" not in result,
+        }
+    )
+```
+
+See the repository guide for a longer walkthrough:
+
+- [`docs.md`](https://github.com/fury-r/mcp-webrtc-transport/blob/master/docs.md)
 
 ## Signaling contract
 
