@@ -1,5 +1,5 @@
 {
-  "name": "@filesharer/p2p-mcp",
+  "name": "mcp-webrtc-transport",
   "version": "0.1.0",
   "type": "module",
   "description": "Reusable browser-side WebRTC transport for peer-to-peer MCP sessions.",
@@ -8,12 +8,12 @@
   "types": "./dist/index.d.ts",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/fury-r/filesharer.git",
+    "url": "git+https://github.com/fury-r/mcp-webrtc-transport.git",
     "directory": "modules/filesharer-p2p-mcp"
   },
-  "homepage": "https://github.com/fury-r/filesharer",
+  "homepage": "https://github.com/fury-r/mcp-webrtc-transport",
   "bugs": {
-    "url": "https://github.com/fury-r/filesharer/issues"
+    "url": "https://github.com/fury-r/mcp-webrtc-transport/issues"
   },
   "author": "fury-r",
   "exports": {

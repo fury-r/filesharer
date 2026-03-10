@@ -25,7 +25,7 @@ For package pages or any README renderer that needs absolute URLs, use the raw G
 
 ## What the transport does
 
-`@filesharer/p2p-mcp` is a browser-side TypeScript module for:
+`mcp-webrtc-transport` is a browser-side TypeScript module for:
 
 - peer discovery over WebSocket signaling
 - SDP offer and answer exchange
@@ -38,7 +38,7 @@ For package pages or any README renderer that needs absolute URLs, use the raw G
 ### Provider peer
 
 ```ts
-import { FilesharerP2PMcpClient, TMcpTool } from '@filesharer/p2p-mcp';
+import { FilesharerP2PMcpClient, TMcpTool } from 'mcp-webrtc-transport';
 
 const tools: TMcpTool[] = [
   {
@@ -94,7 +94,7 @@ await provider.connect('24f5e189');
 ### Client peer
 
 ```ts
-import { FilesharerP2PMcpClient } from '@filesharer/p2p-mcp';
+import { FilesharerP2PMcpClient } from 'mcp-webrtc-transport';
 
 const client = new FilesharerP2PMcpClient({
   signalingBaseUrl: 'ws://localhost:8001',

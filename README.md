@@ -1,6 +1,6 @@
 # mcp-webrtc-transport
 
-Monorepo for a WebRTC-based MCP transport demo and the reusable `@filesharer/p2p-mcp` package.
+Monorepo for a WebRTC-based MCP transport demo and the reusable `mcp-webrtc-transport` package.
 
 ## Repository layout
 
@@ -29,7 +29,7 @@ The reusable MCP transport in `modules/filesharer-p2p-mcp` is designed for:
 #### TypeScript
 
 ```ts
-import { FilesharerP2PMcpClient, TMcpTool } from '@filesharer/p2p-mcp';
+import { FilesharerP2PMcpClient, TMcpTool } from 'mcp-webrtc-transport';
 
 const tools: TMcpTool[] = [
   {
@@ -112,7 +112,7 @@ npm run build:mcp-module
 
 The npm-publishable package in this repository is:
 
-- `@filesharer/p2p-mcp`
+- `mcp-webrtc-transport`
 
 It lives in:
 
