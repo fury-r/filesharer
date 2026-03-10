@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: ["master"]
 
+permissions:
+  contents: read
+
 jobs:
   run-backend-tests:
     runs-on: ubuntu-latest
@@ -24,7 +27,29 @@ jobs:
       - name: Install backend test dependencies
         run: |
           python -m pip install --upgrade pip setuptools wheel
-          python -m pip install Django==5.0.6 channels==3.0.5 djangorestframework==3.15.1 django-cors-headers==4.3.1
+          python - <<'PY'
+          from pathlib import Path
+          source = Path("backend/requirements.txt")
+          raw = source.read_bytes()
+          try:
+              text = raw.decode("utf-8")
+          except UnicodeDecodeError:
+              text = raw.decode("utf-16")
+          lines = text.splitlines()
+          required_prefixes = (
+              "Django==",
+              "channels==",
+              "djangorestframework==",
+              "django-cors-headers==",
+          )
+          filtered_lines = [
+              line for line in lines
+              if line.strip()
+              and line.startswith(required_prefixes)
+          ]
+          Path("backend/requirements-ci.txt").write_text("\n".join(filtered_lines) + "\n", encoding="utf-8")
+          PY
+          python -m pip install -r backend/requirements-ci.txt "daphne==3.0.2"
         shell: bash
       - name: Run backend tests
         run: python manage.py test api.tests
