@@ -1,4 +1,5 @@
 import { TScanQRResponse, TSessionFileUploadResponse, TUploadFileResponse } from '../../types/Response';
+import { TMcpSessionResponse } from '../../types/mcp';
 import axiosInstance from '../axios';
 
 export const useService = () => {
@@ -86,11 +87,31 @@ export const useService = () => {
     }
   };
 
+  const createMcpSession = async (): Promise<TMcpSessionResponse | void> => {
+    try {
+      const response = await axiosInstance.get('/v1/mcp/session/');
+      return response.data as TMcpSessionResponse;
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const getMcpSession = async (sessionId: string): Promise<TMcpSessionResponse | void> => {
+    try {
+      const response = await axiosInstance.get(`/v1/mcp/session/${sessionId}/`);
+      return response.data as TMcpSessionResponse;
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   return {
     uploadFileToServer,
     uploadQRToServer,
     deleteFiles,
     generateLiveShareSession,
-    uploadFilesInSession
+    uploadFilesInSession,
+    createMcpSession,
+    getMcpSession
   };
 };

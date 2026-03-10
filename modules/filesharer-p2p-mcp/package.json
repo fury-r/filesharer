@@ -1,0 +1,47 @@
+{
+  "name": "@fury-r/mcp-webrtc-transport",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Reusable browser-side WebRTC transport for peer-to-peer MCP sessions.",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fury-r/mcp-webrtc-transport.git",
+    "directory": "modules/filesharer-p2p-mcp"
+  },
+  "homepage": "https://github.com/fury-r/mcp-webrtc-transport",
+  "bugs": {
+    "url": "https://github.com/fury-r/mcp-webrtc-transport/issues"
+  },
+  "author": "fury-r",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "node --test test/*.test.mjs",
+    "prepublishOnly": "npm run test && npm run build"
+  },
+  "keywords": [
+    "mcp",
+    "webrtc",
+    "p2p",
+    "model-context-protocol"
+  ],
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}

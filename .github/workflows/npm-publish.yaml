@@ -1,0 +1,31 @@
+name: Publish P2P MCP Package
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish-p2p-mcp:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18.x
+          registry-url: https://registry.npmjs.org
+          cache: npm
+          cache-dependency-path: modules/filesharer-p2p-mcp/package-lock.json
+      - name: Install module dependencies
+        run: npm ci
+        working-directory: ./modules/filesharer-p2p-mcp
+      - name: Publish package
+        run: npm publish
+        working-directory: ./modules/filesharer-p2p-mcp
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
