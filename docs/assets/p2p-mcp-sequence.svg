@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="900" viewBox="0 0 1400 900" role="img" aria-labelledby="title desc">
+  <title id="title">P2P MCP Sequence Diagram</title>
+  <desc id="desc">Provider and AI client exchange signaling through server, then use direct WebRTC data channel for MCP calls.</desc>
+  <defs>
+    <style>
+      .bg { fill: #0b1220; }
+      .card { fill: #111c2f; stroke: #334155; stroke-width: 2; rx: 10; }
+      .title { fill: #e2e8f0; font: 700 20px sans-serif; }
+      .label { fill: #cbd5e1; font: 600 14px sans-serif; }
+      .text { fill: #dbeafe; font: 13px sans-serif; }
+      .note { fill: #0f3d2e; stroke: #34d399; stroke-width: 1.5; rx: 8; }
+      .noteText { fill: #d1fae5; font: 13px sans-serif; }
+      .lifeline { stroke: #475569; stroke-width: 1.5; stroke-dasharray: 6 6; }
+      .arrowA { stroke: #60a5fa; stroke-width: 2; fill: none; marker-end: url(#arrowHeadA); }
+      .arrowB { stroke: #a78bfa; stroke-width: 2; fill: none; marker-end: url(#arrowHeadB); }
+      .arrowC { stroke: #34d399; stroke-width: 2; fill: none; marker-end: url(#arrowHeadC); }
+    </style>
+    <marker id="arrowHeadA" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <polygon points="0,0 8,4 0,8" fill="#60a5fa" />
+    </marker>
+    <marker id="arrowHeadB" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <polygon points="0,0 8,4 0,8" fill="#a78bfa" />
+    </marker>
+    <marker id="arrowHeadC" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <polygon points="0,0 8,4 0,8" fill="#34d399" />
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1400" height="900" />
+  <text class="title" x="30" y="42">P2P MCP Transport Sequence</text>
+
+  <rect class="card" x="90" y="70" width="280" height="56" />
+  <text class="label" x="135" y="104">Provider Peer</text>
+
+  <rect class="card" x="560" y="70" width="280" height="56" />
+  <text class="label" x="597" y="104">Django Channels Signaling</text>
+
+  <rect class="card" x="1030" y="70" width="280" height="56" />
+  <text class="label" x="1090" y="104">AI Client Peer</text>
+
+  <line class="lifeline" x1="230" y1="130" x2="230" y2="840" />
+  <line class="lifeline" x1="700" y1="130" x2="700" y2="840" />
+  <line class="lifeline" x1="1170" y1="130" x2="1170" y2="840" />
+
+  <path class="arrowA" d="M230 180 L700 180" />
+  <text class="text" x="286" y="170">1) peer_announce(provider, tools)</text>
+
+  <path class="arrowA" d="M1170 220 L700 220" />
+  <text class="text" x="823" y="210">2) peer_announce(client)</text>
+
+  <path class="arrowB" d="M700 260 L230 260" />
+  <text class="text" x="307" y="250">3) peer_snapshot</text>
+
+  <path class="arrowB" d="M700 300 L1170 300" />
+  <text class="text" x="865" y="290">4) peer_snapshot</text>
+
+  <path class="arrowA" d="M1170 355 L700 355" />
+  <text class="text" x="808" y="345">5) signal: offer (SDP)</text>
+
+  <path class="arrowA" d="M700 395 L230 395" />
+  <text class="text" x="314" y="385">6) relay offer</text>
+
+  <path class="arrowA" d="M230 435 L700 435" />
+  <text class="text" x="318" y="425">7) signal: answer (SDP)</text>
+
+  <path class="arrowA" d="M700 475 L1170 475" />
+  <text class="text" x="872" y="465">8) relay answer</text>
+
+  <path class="arrowB" d="M1170 515 L700 515" />
+  <path class="arrowB" d="M230 545 L700 545" />
+  <text class="text" x="780" y="505">9) signal: ICE candidates</text>
+
+  <rect class="note" x="170" y="585" width="1060" height="58" />
+  <text class="noteText" x="260" y="620">10) WebRTC data channel opens directly between Provider and Client (DTLS encrypted)</text>
+
+  <path class="arrowC" d="M230 700 L1170 700" />
+  <text class="text" x="540" y="690">11) tool_catalog</text>
+
+  <path class="arrowC" d="M1170 740 L230 740" />
+  <text class="text" x="520" y="730">12) tool_call(requestId, tool, parameters)</text>
+
+  <path class="arrowC" d="M230 780 L1170 780" />
+  <text class="text" x="565" y="770">13) tool_result(requestId, result, ok)</text>
+</svg>

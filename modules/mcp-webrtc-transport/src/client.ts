@@ -28,7 +28,7 @@ const createTimelineEvent = (
   timestamp: new Date().toLocaleTimeString()
 });
 
-export class FilesharerP2PMcpClient {
+export class P2PMcpClient {
   private readonly signalingBaseUrl: string;
   private readonly rtcConfiguration?: RTCConfiguration;
   private readonly onConnectionStateChange?: TMcpClientOptions['onConnectionStateChange'];

@@ -52,7 +52,7 @@ modules/mcp-webrtc-transport/dist
 ## TypeScript example
 
 ```ts
-import { FilesharerP2PMcpClient, TMcpTool } from "@fury-r/mcp-webrtc-transport";
+import { P2PMcpClient, TMcpTool } from "@fury-r/mcp-webrtc-transport";
 
 const tools: TMcpTool[] = [
   {
@@ -62,7 +62,7 @@ const tools: TMcpTool[] = [
   },
 ];
 
-const client = new FilesharerP2PMcpClient({
+const client = new P2PMcpClient({
   signalingBaseUrl: "ws://localhost:8001",
   identity: {
     peerName: "Edge Gateway",

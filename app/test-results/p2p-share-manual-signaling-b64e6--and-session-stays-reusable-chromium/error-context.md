@@ -1,0 +1,46 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - button "File Upload" [ref=e5] [cursor=pointer]
+    - button "Live Share" [ref=e6] [cursor=pointer]
+    - button "P2P MCP" [ref=e7] [cursor=pointer]
+    - button "P2P Share" [disabled]
+  - generic [ref=e9]:
+    - generic [ref=e10]:
+      - heading "P2P file sharing with WebRTC + QR" [level=1] [ref=e11]
+      - paragraph [ref=e12]: No backend signaling. Sender generates an offer QR, receiver scans and generates an answer QR, sender scans answer, then the file moves directly over a peer-to-peer data channel.
+      - paragraph [ref=e13]: "Status: Idle"
+    - generic [ref=e14]:
+      - generic [ref=e15]:
+        - heading "Sender" [level=2] [ref=e16]
+        - button "Choose File" [ref=e17]
+        - generic [ref=e18]:
+          - button "Generate Sender QR" [disabled]
+          - button "Scan Receiver QR" [disabled]
+          - button "Upload Receiver QR" [disabled]
+          - button "Send Selected File" [disabled]
+          - button "End Session" [disabled]
+          - button "Reset" [ref=e19] [cursor=pointer]
+        - generic [ref=e20]:
+          - paragraph [ref=e21]: Send progress
+          - progressbar [ref=e22]
+      - generic [ref=e23]:
+        - heading "Receiver" [level=2] [ref=e24]
+        - generic [ref=e25]:
+          - button "Scan Offer QR" [ref=e26] [cursor=pointer]
+          - button "Upload Offer QR" [ref=e27] [cursor=pointer]
+          - button "Apply Pasted Offer" [disabled]
+          - button "End Session" [disabled]
+        - generic [ref=e28]:
+          - paragraph [ref=e29]: Receive progress
+          - progressbar [ref=e30]
+    - generic [ref=e31]:
+      - paragraph [ref=e32]: Manual signal paste (fallback if camera scan is unavailable)
+      - textbox "Paste fswebrtc payload here" [ref=e33]
+      - generic [ref=e34]:
+        - button "Treat as Offer" [disabled]
+        - button "Treat as Answer" [disabled]
+        - button "Copy latest signal text" [disabled]
+```

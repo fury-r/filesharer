@@ -38,7 +38,7 @@ For package pages or any README renderer that needs absolute URLs, use the raw G
 ### Provider peer
 
 ```ts
-import { FilesharerP2PMcpClient, TMcpTool } from "@fury-r/mcp-webrtc-transport";
+import { P2PMcpClient, TMcpTool } from "@fury-r/mcp-webrtc-transport";
 
 const tools: TMcpTool[] = [
   {
@@ -53,7 +53,7 @@ const tools: TMcpTool[] = [
   },
 ];
 
-const provider = new FilesharerP2PMcpClient({
+const provider = new P2PMcpClient({
   signalingBaseUrl: "ws://localhost:8001",
   identity: {
     peerName: "Edge Gateway",
@@ -94,9 +94,9 @@ await provider.connect("24f5e189");
 ### Client peer
 
 ```ts
-import { FilesharerP2PMcpClient } from "@fury-r/mcp-webrtc-transport";
+import { P2PMcpClient } from "@fury-r/mcp-webrtc-transport";
 
-const client = new FilesharerP2PMcpClient({
+const client = new P2PMcpClient({
   signalingBaseUrl: "ws://localhost:8001",
   identity: {
     peerName: "AI Client",
@@ -182,3 +182,21 @@ The transport expects a signaling backend that exposes:
 - `ws://<host>/ws/mcp/<session_id>/<peer_id>`
 
 In this repository, Django Channels provides that signaling layer while MCP payloads stay peer-to-peer over WebRTC.
+
+## Backend-free QR file sharing (new)
+
+The frontend now includes a dedicated `P2P Share` page that performs signaling with QR only and transfers files directly over WebRTC.
+
+Flow:
+
+1. Sender selects a file and clicks `Generate Sender QR`.
+2. Receiver scans sender QR and automatically generates an `Answer QR`.
+3. Sender scans the receiver answer QR.
+4. WebRTC data channel opens and the file transfers peer-to-peer.
+
+Notes:
+
+- No app backend API is used in this flow.
+- The SDP offer/answer is encoded into QR payloads (`fswebrtc:<base64url>`).
+- File chunks are sent as binary `ArrayBuffer` messages over an ordered data channel.
+- If camera scanning is unavailable, both peers can copy/paste the same signal payload text.

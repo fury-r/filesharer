@@ -1,4 +1,4 @@
-export { FilesharerP2PMcpClient } from '../../../modules/mcp-webrtc-transport/src';
+export { P2PMcpClient } from '../../../modules/mcp-webrtc-transport/src';
 export type {
   TMcpClientIdentity,
   TMcpClientOptions,

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
 import { v4 as uuidv4 } from 'uuid';
 import { useService } from '../../../api/service/useService';
-import { FilesharerP2PMcpClient, TMcpPeer, TMcpRole, TMcpSessionResponse, TMcpTimelineEvent, TMcpTool } from '../../../modules/p2p-mcp';
+import { P2PMcpClient, TMcpPeer, TMcpRole, TMcpSessionResponse, TMcpTimelineEvent, TMcpTool } from '../../../modules/p2p-mcp';
 
 const LOCAL_MCP_TOOLS: TMcpTool[] = [
   {
@@ -70,7 +70,7 @@ export const usePeerMcp = () => {
   const [webrtcState, setWebrtcState] = useState('idle');
   const [channelState, setChannelState] = useState<'idle' | 'opening' | 'open' | 'closed'>('idle');
   const [isBusy, setIsBusy] = useState(false);
-  const clientRef = useRef<FilesharerP2PMcpClient | null>(null);
+  const clientRef = useRef<P2PMcpClient | null>(null);
   const peerNameRef = useRef(peerName);
   const sessionIdRef = useRef(session?.session_id || '');
   const remotePeerCountRef = useRef(remotePeers.length);
@@ -154,7 +154,7 @@ export const usePeerMcp = () => {
 
   const buildClient = useCallback(
     (nextRole: TMcpRole) =>
-      new FilesharerP2PMcpClient({
+      new P2PMcpClient({
         signalingBaseUrl: getSocketBaseUrl(),
         identity: {
           peerId: localPeerId,

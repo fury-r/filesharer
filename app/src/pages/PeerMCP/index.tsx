@@ -1,4 +1,4 @@
-import { FaArrowRight, FaCloud, FaLock, FaMicrochip, FaPlug, FaSatelliteDish } from 'react-icons/fa';
+ import { FaArrowRight, FaCloud, FaLock, FaMicrochip, FaPlug, FaSatelliteDish } from 'react-icons/fa';
 import { MdContentCopy, MdOutlineSensors, MdOutlineTipsAndUpdates } from 'react-icons/md';
 import { usePeerMcp } from './hooks/usePeerMcp';
 

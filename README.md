@@ -18,6 +18,39 @@ The reusable MCP transport in `modules/mcp-webrtc-transport` is designed for:
 - direct MCP tool calls over WebRTC data channels
 - privacy-first, low-latency tool execution
 
+### Sequence diagram
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant Provider as Provider Peer
+  participant Server as Django Channels Signaling
+  participant Client as AI Client Peer
+
+  Provider->>Server: peer_announce(name, role=provider, tools)
+  Client->>Server: peer_announce(name, role=client)
+  Server-->>Provider: peer_snapshot
+  Server-->>Client: peer_snapshot
+
+  Client->>Server: signal offer (SDP) target=provider
+  Server-->>Provider: relay offer
+  Provider->>Server: signal answer (SDP) target=client
+  Server-->>Client: relay answer
+
+  Client->>Server: signal ICE candidates
+  Provider->>Server: signal ICE candidates
+  Server-->>Provider: relay ICE
+  Server-->>Client: relay ICE
+
+  Note over Provider,Client: WebRTC data channel opens (DTLS encrypted)
+
+  Provider-->>Client: tool_catalog
+  Client->>Provider: tool_call(requestId, tool, parameters)
+  Provider-->>Client: tool_result(requestId, result, ok)
+```
+
+![P2P MCP sequence diagram](./docs/assets/p2p-mcp-sequence.svg)
+
 ### Screenshots
 
 ![Peer MCP overview](./docs/assets/peer-mcp-overview.png)
@@ -29,7 +62,7 @@ The reusable MCP transport in `modules/mcp-webrtc-transport` is designed for:
 #### TypeScript
 
 ```ts
-import { FilesharerP2PMcpClient, TMcpTool } from "@fury-r/mcp-webrtc-transport";
+import { P2PMcpClient, TMcpTool } from "@fury-r/mcp-webrtc-transport";
 
 const tools: TMcpTool[] = [
   {
@@ -39,7 +72,7 @@ const tools: TMcpTool[] = [
   },
 ];
 
-const client = new FilesharerP2PMcpClient({
+const client = new P2PMcpClient({
   signalingBaseUrl: "ws://localhost:8001",
   identity: {
     peerName: "Edge Gateway",
@@ -99,6 +132,20 @@ cd app
 npm install --legacy-peer-deps
 npm run dev
 ```
+
+## Netlify deployment (P2P Share only)
+
+This repository now includes a dedicated GitHub Actions workflow that deploys only the frontend in `P2P Share` mode:
+
+- Workflow: `.github/workflows/netlify-p2p-share.yml`
+- Netlify config: `netlify.toml`
+
+In deploy mode, the app sets `VITE_APP_MODE=p2p-share`, which forces the UI to show only the `P2P Share` page (the old `Live Share` page is not exposed in the deployed navigation).
+
+Set these GitHub repository secrets before running the workflow:
+
+- `NETLIFY_AUTH_TOKEN`
+- `NETLIFY_SITE_ID`
 
 ### Build the reusable package
 
