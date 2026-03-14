@@ -33,6 +33,59 @@ For package pages or any README renderer that needs absolute URLs, use the raw G
 - direct MCP tool calls over a WebRTC data channel
 - timeline, connection-state, tool-catalog, and tool-result callbacks
 
+## Signaling diagrams
+
+### Backend signaling flow
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant Provider as Provider Peer
+  participant Server as Django Channels Signaling
+  participant Client as AI Client Peer
+
+  Provider->>Server: peer_announce(name, role=provider, tools)
+  Client->>Server: peer_announce(name, role=client)
+  Server-->>Provider: peer_snapshot
+  Server-->>Client: peer_snapshot
+
+  Client->>Server: signal offer (SDP) target=provider
+  Server-->>Provider: relay offer
+  Provider->>Server: signal answer (SDP) target=client
+  Server-->>Client: relay answer
+
+  Note over Provider,Client: WebRTC data channel opens (DTLS encrypted)
+
+  Provider-->>Client: tool_catalog
+  Client->>Provider: tool_call(requestId, tool, parameters)
+  Provider-->>Client: tool_result(requestId, result, ok)
+```
+
+### Backend-free manual flow
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant Provider as Provider Peer
+  participant OOB as Manual Exchange
+  participant Client as AI Client Peer
+
+  Provider->>Provider: createManualOffer()
+  Provider->>OOB: Share offer payload
+  OOB-->>Client: Offer payload
+
+  Client->>Client: createManualAnswer(offer)
+  Client->>OOB: Share answer payload
+  OOB-->>Provider: Answer payload
+
+  Provider->>Provider: applyManualAnswer(answer)
+  Note over Provider,Client: WebRTC data channel opens (DTLS encrypted)
+
+  Provider-->>Client: tool_catalog
+  Client->>Provider: tool_call(requestId, tool, parameters)
+  Provider-->>Client: tool_result(requestId, result, ok)
+```
+
 ## TypeScript usage
 
 ### Provider peer

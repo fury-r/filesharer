@@ -23,7 +23,9 @@ This transport supports two signaling approaches:
 - backend signaling via Django Channels (`/v1/mcp/session/*` + `/ws/mcp/*`)
 - backend-free manual signaling using exchanged SDP payloads (`createManualOffer`, `createManualAnswer`, `applyManualAnswer`)
 
-### Sequence diagram
+### Sequence diagrams
+
+#### Backend signaling (Django Channels)
 
 ```mermaid
 sequenceDiagram
@@ -47,6 +49,31 @@ sequenceDiagram
   Server-->>Provider: relay ICE
   Server-->>Client: relay ICE
 
+  Note over Provider,Client: WebRTC data channel opens (DTLS encrypted)
+
+  Provider-->>Client: tool_catalog
+  Client->>Provider: tool_call(requestId, tool, parameters)
+  Provider-->>Client: tool_result(requestId, result, ok)
+```
+
+#### Backend-free manual signaling (copy/paste or QR)
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant Provider as Provider Peer
+  participant OOB as Manual Exchange
+  participant Client as AI Client Peer
+
+  Provider->>Provider: createManualOffer()
+  Provider->>OOB: Share offer SDP payload
+  OOB-->>Client: Offer SDP
+
+  Client->>Client: createManualAnswer(offer)
+  Client->>OOB: Share answer SDP payload
+  OOB-->>Provider: Answer SDP
+
+  Provider->>Provider: applyManualAnswer(answer)
   Note over Provider,Client: WebRTC data channel opens (DTLS encrypted)
 
   Provider-->>Client: tool_catalog

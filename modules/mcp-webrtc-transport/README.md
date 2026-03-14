@@ -34,6 +34,57 @@ Why use it:
 - it reduces server bandwidth because MCP traffic does not need to be proxied
 - it works well for local-device, edge-device, or privacy-first assistant workflows
 
+## Sequence diagrams
+
+### Backend signaling
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant Provider as Provider Peer
+  participant Server as Signaling Server
+  participant Client as AI Client Peer
+
+  Provider->>Server: peer_announce(name, role=provider, tools)
+  Client->>Server: peer_announce(name, role=client)
+  Server-->>Provider: peer_snapshot
+  Server-->>Client: peer_snapshot
+
+  Client->>Server: signal offer (SDP)
+  Server-->>Provider: relay offer
+  Provider->>Server: signal answer (SDP)
+  Server-->>Client: relay answer
+
+  Note over Provider,Client: WebRTC data channel opens
+  Provider-->>Client: tool_catalog
+  Client->>Provider: tool_call
+  Provider-->>Client: tool_result
+```
+
+### Backend-free manual signaling
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant Provider as Provider Peer
+  participant OOB as Manual Exchange
+  participant Client as AI Client Peer
+
+  Provider->>Provider: createManualOffer()
+  Provider->>OOB: Share offer payload
+  OOB-->>Client: Offer payload
+
+  Client->>Client: createManualAnswer(offer)
+  Client->>OOB: Share answer payload
+  OOB-->>Provider: Answer payload
+
+  Provider->>Provider: applyManualAnswer(answer)
+  Note over Provider,Client: WebRTC data channel opens
+  Provider-->>Client: tool_catalog
+  Client->>Provider: tool_call
+  Provider-->>Client: tool_result
+```
+
 ## Build
 
 From the repository frontend workspace:
