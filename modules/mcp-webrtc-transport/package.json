@@ -1,5 +1,5 @@
 {
-  "name": "@fury-r/mcp-webrtc-transport",
+  "name": "mcp-webrtc-transport",
   "version": "0.1.4",
   "type": "module",
   "description": "Reusable browser-side WebRTC transport for peer-to-peer MCP sessions.",

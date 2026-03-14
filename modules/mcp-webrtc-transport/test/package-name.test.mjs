@@ -11,7 +11,7 @@ const moduleReadme = readText('../README.md');
 const peerMcpPage = readText('../../../app/src/pages/PeerMCP/index.tsx');
 
 test('package metadata uses the fury-r scoped package name', () => {
-  assert.equal(packageJson.name, '@fury-r/mcp-webrtc-transport');
+  assert.equal(packageJson.name, 'mcp-webrtc-transport');
   assert.equal(packageJson.repository.url, 'git+https://github.com/fury-r/mcp-webrtc-transport.git');
   assert.equal(packageJson.homepage, 'https://github.com/fury-r/mcp-webrtc-transport');
   assert.equal(packageJson.bugs.url, 'https://github.com/fury-r/mcp-webrtc-transport/issues');

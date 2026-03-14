@@ -1,4 +1,4 @@
-# `@fury-r/mcp-webrtc-transport`
+# `mcp-webrtc-transport`
 
 Reusable browser-side TypeScript module for peer-to-peer MCP sessions over WebRTC.
 
@@ -103,7 +103,7 @@ modules/mcp-webrtc-transport/dist
 ## TypeScript example
 
 ```ts
-import { P2PMcpClient, TMcpTool } from "@fury-r/mcp-webrtc-transport";
+import { P2PMcpClient, TMcpTool } from "mcp-webrtc-transport";
 
 const tools: TMcpTool[] = [
   {
@@ -145,7 +145,7 @@ This mode is useful for local demos, LAN tests, and environments where running a
 ### Provider flow (manual offer)
 
 ```ts
-import { P2PMcpClient, TMcpTool } from "@fury-r/mcp-webrtc-transport";
+import { P2PMcpClient, TMcpTool } from "mcp-webrtc-transport";
 
 const tools: TMcpTool[] = [
   {
@@ -180,7 +180,7 @@ const offer = await provider.createManualOffer();
 ### Client flow (apply offer, return answer)
 
 ```ts
-import { P2PMcpClient } from "@fury-r/mcp-webrtc-transport";
+import { P2PMcpClient } from "mcp-webrtc-transport";
 
 const client = new P2PMcpClient({
   identity: {

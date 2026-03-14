@@ -25,7 +25,7 @@ For package pages or any README renderer that needs absolute URLs, use the raw G
 
 ## What the transport does
 
-`@fury-r/mcp-webrtc-transport` is a browser-side TypeScript module for:
+`mcp-webrtc-transport` is a browser-side TypeScript module for:
 
 - peer discovery over WebSocket signaling
 - SDP offer and answer exchange
@@ -91,7 +91,7 @@ sequenceDiagram
 ### Provider peer
 
 ```ts
-import { P2PMcpClient, TMcpTool } from "@fury-r/mcp-webrtc-transport";
+import { P2PMcpClient, TMcpTool } from "mcp-webrtc-transport";
 
 const tools: TMcpTool[] = [
   {
@@ -147,7 +147,7 @@ await provider.connect("24f5e189");
 ### Client peer
 
 ```ts
-import { P2PMcpClient } from "@fury-r/mcp-webrtc-transport";
+import { P2PMcpClient } from "mcp-webrtc-transport";
 
 const client = new P2PMcpClient({
   signalingBaseUrl: "ws://localhost:8001",
