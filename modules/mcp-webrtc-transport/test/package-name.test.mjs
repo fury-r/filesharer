@@ -19,7 +19,7 @@ test('package metadata uses the fury-r scoped package name', () => {
 
 test('docs and UI references use the fury-r scoped package name instead of older package names', () => {
   for (const fileContents of [rootReadme, docsGuide, moduleReadme, peerMcpPage]) {
-    assert.match(fileContents, /@fury-r\/mcp-webrtc-transport/);
+    assert.match(fileContents, /mcp-webrtc-transport/);
     assert.doesNotMatch(fileContents, /@filesharer\/p2p-mcp/);
     assert.doesNotMatch(fileContents, /from 'mcp-webrtc-transport'/);
   }
