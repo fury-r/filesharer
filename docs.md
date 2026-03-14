@@ -117,6 +117,62 @@ client.sendToolCall("get_device_status", {
 });
 ```
 
+## Backend-free MCP signaling (manual)
+
+The transport can run without backend signaling by exchanging SDP payloads manually.
+
+Use this when:
+
+- you want to test quickly without Django Channels
+- peers are on the same machine or LAN
+- copy/paste or QR exchange is acceptable
+
+### Manual workflow
+
+1. Provider creates a local offer using `createManualOffer()`.
+2. Provider shares the offer payload with client (copy/paste, QR, etc.).
+3. Client calls `createManualAnswer({ sdp, type: 'offer' })`.
+4. Client shares answer payload back to provider.
+5. Provider calls `applyManualAnswer({ sdp, type: 'answer' })`.
+6. Data channel opens and MCP `tool_catalog` / `tool_call` / `tool_result` flows directly peer-to-peer.
+
+### Minimal manual signaling example
+
+```ts
+// provider side
+const provider = new P2PMcpClient({
+  identity: {
+    peerName: "Edge Gateway",
+    role: "provider",
+    tools,
+  },
+  toolCallHandler: async (message) => ({ ok: true, tool: message.tool }),
+});
+
+const offer = await provider.createManualOffer();
+// share offer.sdp with client
+
+// client side
+const client = new P2PMcpClient({
+  identity: {
+    peerName: "AI Client",
+    role: "client",
+  },
+});
+
+const answer = await client.createManualAnswer({ sdp: offerSdp, type: "offer" });
+// share answer.sdp back to provider
+
+// provider side
+await provider.applyManualAnswer({ sdp: answerSdp, type: "answer" });
+```
+
+### Notes and limits
+
+- Manual mode does not use `connect(sessionId)` or backend session endpoints.
+- For production-grade connectivity across strict NAT/firewalls, TURN is still commonly required.
+- This repository's P2P MCP page can now run in this manual mode without backend signaling.
+
 ## Python interoperability usage
 
 This repository does not currently ship a Python package for the transport. Instead, Python usually participates by implementing the same signaling contract and MCP message format on top of a Python WebRTC stack such as `aiortc`.

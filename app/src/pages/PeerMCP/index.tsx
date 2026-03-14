@@ -1,4 +1,4 @@
- import { FaArrowRight, FaCloud, FaLock, FaMicrochip, FaPlug, FaSatelliteDish } from 'react-icons/fa';
+import { FaArrowRight, FaCloud, FaLock, FaMicrochip, FaPlug, FaSatelliteDish } from 'react-icons/fa';
 import { MdContentCopy, MdOutlineSensors, MdOutlineTipsAndUpdates } from 'react-icons/md';
 import { usePeerMcp } from './hooks/usePeerMcp';
 
@@ -17,28 +17,28 @@ const statusTone: Record<string, string> = {
 
 const PeerMCP = () => {
   const {
+    applySignalAsAnswer,
+    applySignalAsOffer,
     channelState,
     closeSession,
-    copySessionCode,
+    copyLatestSignalText,
+    generateProviderOffer,
     invokeTool,
     isBusy,
-    joinClientSession,
     lastResult,
+    latestSignalText,
     localPeerId,
     parametersText,
     peerName,
-    remotePeers,
     remoteTools,
     role,
     selectedTool,
-    session,
-    sessionInput,
     setParametersText,
     setPeerName,
     setSelectedTool,
-    setSessionInput,
+    setSignalInput,
+    signalInput,
     signalingState,
-    startProviderSession,
     timeline,
     tools,
     webrtcState
@@ -53,24 +53,24 @@ const PeerMCP = () => {
           <div className="mb-4 flex flex-wrap items-center gap-3">
             <span className="badge badge-primary badge-outline">WebRTC + MCP</span>
             <span className="badge badge-outline border-cyan-400/60 text-cyan-200">Direct tool invocation</span>
-            <span className="badge badge-outline border-emerald-400/60 text-emerald-200">Privacy-first signaling</span>
+            <span className="badge badge-outline border-emerald-400/60 text-emerald-200">Backend-free signaling</span>
           </div>
           <h1 className="mb-3 text-4xl font-black tracking-tight text-white">Peer-to-Peer MCP communication</h1>
           <p className="max-w-3xl text-base text-slate-200 md:text-lg">
-            Turn this app into a lightweight signaling hub so an AI client can discover a peer device, negotiate WebRTC, and invoke
-            MCP-style tools directly over an encrypted data channel.
+            Use manual offer and answer payloads to negotiate WebRTC directly between two browser peers, then invoke MCP-style tools over
+            an encrypted data channel without backend signaling endpoints.
           </p>
 
           <div className="mt-6 grid gap-4 md:grid-cols-3">
             <div className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-4">
               <FaSatelliteDish className="mb-3 text-2xl text-cyan-300" />
-              <h3 className="font-semibold">Signaling only</h3>
-              <p className="mt-2 text-sm text-slate-300">Django Channels exchanges SDP offers, answers, and ICE candidates.</p>
+              <h3 className="font-semibold">Manual signaling</h3>
+              <p className="mt-2 text-sm text-slate-300">Exchange offer and answer payloads by copy and paste between two peers.</p>
             </div>
             <div className="rounded-2xl border border-violet-400/20 bg-violet-500/10 p-4">
               <FaLock className="mb-3 text-2xl text-violet-300" />
               <h3 className="font-semibold">Secure by default</h3>
-              <p className="mt-2 text-sm text-slate-300">WebRTC data channels use DTLS, so tool traffic stays off the central server.</p>
+              <p className="mt-2 text-sm text-slate-300">WebRTC data channels use DTLS, so tool traffic stays peer-to-peer.</p>
             </div>
             <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 p-4">
               <FaMicrochip className="mb-3 text-2xl text-emerald-300" />
@@ -87,7 +87,7 @@ const PeerMCP = () => {
           </div>
           <div className="space-y-3">
             <div className="flex items-center justify-between rounded-2xl bg-white/5 px-4 py-3">
-              <span className="text-sm text-slate-300">Signaling</span>
+              <span className="text-sm text-slate-300">Signaling mode</span>
               <span className={`badge ${statusTone[signalingState] || 'badge-outline'}`}>{signalingState}</span>
             </div>
             <div className="flex items-center justify-between rounded-2xl bg-white/5 px-4 py-3">
@@ -104,19 +104,15 @@ const PeerMCP = () => {
             <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Local peer id</p>
             <p className="mt-2 font-mono text-lg text-cyan-200">{localPeerId}</p>
             <p className="mt-3 text-sm text-slate-300">
-              Use two browser windows: create a provider session on one side, then join the same session as an AI client on the other.
+              Open two browser windows: generate offer on provider window, apply offer on client window, then paste answer back to provider.
             </p>
           </div>
 
           <div className="mt-5 rounded-2xl border border-emerald-400/20 bg-emerald-500/10 p-4">
             <p className="text-xs uppercase tracking-[0.3em] text-emerald-200/80">Reusable module</p>
             <p className="mt-2 text-sm text-slate-200">
-              The transport layer is also available as the <span className="font-mono text-emerald-200">@fury-r/mcp-webrtc-transport</span> TypeScript
-              module from this repository.
+              This flow is powered by <span className="font-mono text-emerald-200">@fury-r/mcp-webrtc-transport</span> in local source mode.
             </p>
-            <pre className="mt-3 overflow-auto rounded-xl bg-black/30 p-3 text-xs text-emerald-100">
-              npm run build:mcp-module
-            </pre>
           </div>
         </div>
       </div>
@@ -126,7 +122,7 @@ const PeerMCP = () => {
           <div className="rounded-[28px] border border-white/10 bg-slate-900/80 p-5 shadow-lg shadow-black/20">
             <div className="mb-4 flex items-center gap-2">
               <FaPlug className="text-cyan-300" />
-              <h2 className="text-xl font-bold">Session setup</h2>
+              <h2 className="text-xl font-bold">Manual setup</h2>
             </div>
 
             <label className="form-control mb-4">
@@ -139,77 +135,55 @@ const PeerMCP = () => {
               />
             </label>
 
-            <button className="btn btn-primary w-full" disabled={isBusy} onClick={startProviderSession}>
-              Start provider session
+            <button className="btn btn-primary w-full" disabled={isBusy} onClick={generateProviderOffer}>
+              Generate provider offer
             </button>
 
-            <div className="divider text-slate-500">or</div>
+            <div className="divider text-slate-500">signal exchange</div>
 
             <label className="form-control">
-              <span className="label-text mb-2 text-slate-300">Join with session code</span>
-              <input
-                className="input input-bordered w-full border-white/10 bg-white/5 font-mono uppercase text-white"
-                value={sessionInput}
-                onChange={(event) => setSessionInput(event.target.value)}
-                placeholder="e.g. A1B2C3D4"
+              <span className="label-text mb-2 text-slate-300">Paste mcpwebrtc payload</span>
+              <textarea
+                className="textarea textarea-bordered h-40 w-full border-white/10 bg-white/5 font-mono text-xs text-white"
+                value={signalInput}
+                onChange={(event) => setSignalInput(event.target.value)}
+                placeholder="Paste offer here on client, paste answer here on provider"
               />
             </label>
-            <button className="btn btn-outline mt-3 w-full border-cyan-400/40 text-cyan-100" disabled={isBusy} onClick={joinClientSession}>
-              Join as AI client
-            </button>
+
+            <div className="mt-3 grid gap-2">
+              <button className="btn btn-outline border-cyan-400/40 text-cyan-100" disabled={isBusy} onClick={applySignalAsOffer}>
+                Treat as offer (client)
+              </button>
+              <button className="btn btn-outline border-emerald-400/40 text-emerald-100" disabled={isBusy} onClick={applySignalAsAnswer}>
+                Treat as answer (provider)
+              </button>
+            </div>
           </div>
 
           <div className="rounded-[28px] border border-white/10 bg-slate-900/80 p-5 shadow-lg shadow-black/20">
             <div className="mb-4 flex items-center gap-2">
               <FaCloud className="text-violet-300" />
-              <h2 className="text-xl font-bold">Session discovery</h2>
+              <h2 className="text-xl font-bold">Signal payload</h2>
             </div>
 
-            {session ? (
-              <>
-                <div className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-4">
-                  <p className="text-xs uppercase tracking-[0.3em] text-cyan-200/80">Session code</p>
-                  <div className="mt-2 flex items-center gap-3">
-                    <span className="font-mono text-2xl font-bold tracking-[0.2em]">{session.session_id.toUpperCase()}</span>
-                    <button className="btn btn-ghost btn-sm text-cyan-100" onClick={copySessionCode}>
-                      <MdContentCopy />
-                    </button>
-                  </div>
-                  <p className="mt-2 text-sm text-slate-200">
-                    Role: <span className="font-semibold capitalize text-white">{role}</span>
-                  </p>
-                </div>
+            <div className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-4">
+              <p className="text-xs uppercase tracking-[0.3em] text-cyan-200/80">Current role</p>
+              <p className="mt-2 text-lg font-bold capitalize">{role}</p>
+              <p className="mt-2 text-sm text-slate-200">Copy this payload to the other peer after generating offer or answer.</p>
+              <button className="btn btn-ghost btn-sm mt-2 text-cyan-100" onClick={copyLatestSignalText}>
+                <MdContentCopy />
+                Copy latest signal text
+              </button>
+            </div>
 
-                <div className="mt-4 space-y-2">
-                  {remotePeers.length === 0 ? (
-                    <div className="rounded-2xl border border-dashed border-white/10 p-4 text-sm text-slate-400">
-                      Waiting for another peer to join this session.
-                    </div>
-                  ) : (
-                    remotePeers.map((peer) => (
-                      <div key={peer.peer_id} className="rounded-2xl bg-white/5 p-4">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="font-semibold text-white">{peer.name}</p>
-                            <p className="text-xs uppercase tracking-[0.25em] text-slate-400">{peer.peer_id}</p>
-                          </div>
-                          <span className="badge badge-outline capitalize">{peer.role}</span>
-                        </div>
-                        <p className="mt-2 text-sm text-slate-300">{peer.tools.length} published MCP tools</p>
-                      </div>
-                    ))
-                  )}
-                </div>
+            <pre className="mt-4 max-h-56 overflow-auto rounded-2xl bg-black/30 p-3 text-xs text-emerald-200">
+              {latestSignalText || 'No signal payload generated yet.'}
+            </pre>
 
-                <button className="btn btn-ghost mt-4 w-full text-slate-300" onClick={closeSession}>
-                  Clear session
-                </button>
-              </>
-            ) : (
-              <div className="rounded-2xl border border-dashed border-white/10 p-4 text-sm text-slate-400">
-                Create a provider session to advertise tools, or join an existing session to behave like an AI client.
-              </div>
-            )}
+            <button className="btn btn-ghost mt-4 w-full text-slate-300" onClick={closeSession}>
+              Clear session
+            </button>
           </div>
         </div>
 
@@ -224,7 +198,7 @@ const PeerMCP = () => {
               <div className="grid gap-3 md:grid-cols-2">
                 {visibleTools.length === 0 ? (
                   <div className="rounded-2xl border border-dashed border-white/10 p-4 text-sm text-slate-400">
-                    Waiting for the provider to publish an MCP tool catalog over the peer connection.
+                    Waiting for data channel to open and receive tool catalog from provider.
                   </div>
                 ) : (
                   visibleTools.map((tool) => (
@@ -253,11 +227,11 @@ const PeerMCP = () => {
               <div className="mt-4 space-y-3 text-sm text-slate-300">
                 <div className="flex items-center gap-3 rounded-2xl bg-white/5 p-3">
                   <span className="flex h-9 w-9 items-center justify-center rounded-full bg-cyan-500/15 text-cyan-200">1</span>
-                  <span>Provider advertises tools through the signaling layer.</span>
+                  <span>Provider creates a manual offer payload and shares it with the client.</span>
                 </div>
                 <div className="flex items-center gap-3 rounded-2xl bg-white/5 p-3">
                   <span className="flex h-9 w-9 items-center justify-center rounded-full bg-violet-500/15 text-violet-200">2</span>
-                  <span>AI client creates an SDP offer and negotiates ICE candidates.</span>
+                  <span>Client applies offer, generates answer payload, and sends it back.</span>
                 </div>
                 <div className="flex items-center gap-3 rounded-2xl bg-white/5 p-3">
                   <span className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-200">3</span>
@@ -266,11 +240,11 @@ const PeerMCP = () => {
               </div>
 
               <div className="mt-5 flex items-center justify-center gap-2 text-slate-400">
+                <span>Provider</span>
+                <FaArrowRight />
+                <span>Manual signal exchange</span>
+                <FaArrowRight />
                 <span>AI Client</span>
-                <FaArrowRight />
-                <span>Signaling Server</span>
-                <FaArrowRight />
-                <span>Peer Device</span>
               </div>
             </div>
           </div>
@@ -279,7 +253,7 @@ const PeerMCP = () => {
             <div className="rounded-[28px] border border-white/10 bg-slate-900/80 p-5 shadow-lg shadow-black/20">
               <h2 className="text-xl font-bold">Tool request composer</h2>
               <p className="mt-2 text-sm text-slate-400">
-                Use structured JSON parameters to invoke an MCP tool on the remote peer. The central server is not part of tool execution.
+                Use structured JSON parameters to invoke an MCP tool on the remote peer. Signaling is already complete at this stage.
               </p>
 
               <textarea
@@ -298,7 +272,7 @@ const PeerMCP = () => {
               </div>
 
               {role !== 'client' && (
-                <p className="mt-3 text-xs text-slate-500">Switch to an AI client in another window to send tool requests to this provider.</p>
+                <p className="mt-3 text-xs text-slate-500">Switch to client role in another window to invoke provider tools.</p>
               )}
             </div>
 
@@ -315,7 +289,7 @@ const PeerMCP = () => {
             <div className="mt-4 space-y-3">
               {timeline.length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-white/10 p-4 text-sm text-slate-400">
-                  The timeline will populate as peers announce themselves, negotiate WebRTC, and exchange MCP messages.
+                  Timeline entries will appear as offer and answer payloads are applied and MCP messages are exchanged.
                 </div>
               ) : (
                 timeline.map((event) => (

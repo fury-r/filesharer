@@ -18,6 +18,11 @@ The reusable MCP transport in `modules/mcp-webrtc-transport` is designed for:
 - direct MCP tool calls over WebRTC data channels
 - privacy-first, low-latency tool execution
 
+This transport supports two signaling approaches:
+
+- backend signaling via Django Channels (`/v1/mcp/session/*` + `/ws/mcp/*`)
+- backend-free manual signaling using exchanged SDP payloads (`createManualOffer`, `createManualAnswer`, `applyManualAnswer`)
+
 ### Sequence diagram
 
 ```mermaid

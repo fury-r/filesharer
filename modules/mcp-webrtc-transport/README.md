@@ -85,6 +85,90 @@ const client = new P2PMcpClient({
 await client.connect("24f5e189");
 ```
 
+## Backend-free manual signaling
+
+You can also run MCP peer connection without a signaling backend by exchanging SDP payloads manually (copy and paste, QR, or any out-of-band channel).
+
+This mode is useful for local demos, LAN tests, and environments where running a signaling server is not desired.
+
+### Provider flow (manual offer)
+
+```ts
+import { P2PMcpClient, TMcpTool } from "@fury-r/mcp-webrtc-transport";
+
+const tools: TMcpTool[] = [
+  {
+    name: "get_device_status",
+    description: "Return current status",
+    parameters: { device_id: "edge-gateway-01" },
+  },
+];
+
+const provider = new P2PMcpClient({
+  identity: {
+    peerName: "Edge Gateway",
+    role: "provider",
+    tools,
+  },
+  toolCallHandler: async (message) => {
+    if (message.tool === "get_device_status") {
+      return {
+        device_id: message.parameters.device_id,
+        status: "healthy",
+        transport: "webrtc-datachannel",
+      };
+    }
+    return { error: `Unknown tool: ${message.tool}` };
+  },
+});
+
+const offer = await provider.createManualOffer();
+// Send `offer.sdp` to the client peer by copy/paste or QR.
+```
+
+### Client flow (apply offer, return answer)
+
+```ts
+import { P2PMcpClient } from "@fury-r/mcp-webrtc-transport";
+
+const client = new P2PMcpClient({
+  identity: {
+    peerName: "AI Client",
+    role: "client",
+  },
+  onToolCatalog: (message) => {
+    console.log("catalog", message.tools);
+  },
+  onToolResult: (message) => {
+    console.log("result", message.result);
+  },
+});
+
+const answer = await client.createManualAnswer({
+  sdp: offerSdpFromProvider,
+  type: "offer",
+});
+// Send `answer.sdp` back to provider.
+```
+
+### Provider final step
+
+```ts
+await provider.applyManualAnswer({
+  sdp: answerSdpFromClient,
+  type: "answer",
+});
+
+// After data channel opens, the client can call tools directly.
+client.sendToolCall("get_device_status", { device_id: "edge-gateway-01" });
+```
+
+Notes:
+
+- In manual mode, do not call `connect(sessionId)`.
+- In websocket mode, keep using `signalingBaseUrl` + `connect(sessionId)`.
+- A direct connection can still fail on restrictive networks; use TURN infrastructure for high-connectivity production environments.
+
 ## Python interoperability example
 
 This package is browser-side TypeScript, so Python usage is typically an interoperability story rather than a direct package import. A Python peer can implement the same signaling contract and exchange the same MCP messages over a WebRTC data channel.

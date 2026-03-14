@@ -88,7 +88,7 @@ export type TMcpClientIdentity = {
 };
 
 export type TMcpClientOptions = {
-  signalingBaseUrl: string;
+  signalingBaseUrl?: string;
   rtcConfiguration?: RTCConfiguration;
   identity: TMcpClientIdentity;
   toolCallHandler?: (message: Extract<TMcpMessage, { type: 'tool_call' }>) => Promise<unknown> | unknown;

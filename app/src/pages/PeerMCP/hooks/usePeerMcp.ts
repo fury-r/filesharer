@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
 import { v4 as uuidv4 } from 'uuid';
-import { useService } from '../../../api/service/useService';
-import { P2PMcpClient, TMcpPeer, TMcpRole, TMcpSessionResponse, TMcpTimelineEvent, TMcpTool } from '../../../modules/p2p-mcp';
+import { P2PMcpClient, TMcpRole, TMcpTimelineEvent, TMcpTool } from '../../../modules/p2p-mcp';
 
 const LOCAL_MCP_TOOLS: TMcpTool[] = [
   {
@@ -42,25 +41,73 @@ const TOOL_PARAMETER_MAP = LOCAL_MCP_TOOLS.reduce<Record<string, string>>((acc, 
   acc[tool.name] = JSON.stringify(tool.parameters, null, 2);
   return acc;
 }, {});
-const MAX_TIMELINE_ENTRIES = 16;
+
+const MAX_TIMELINE_ENTRIES = 20;
 const MAX_LOG_ENTRIES = 10;
 const MS_PER_MINUTE = 60_000;
 
-const getSocketBaseUrl = () => {
-  const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-  return `${protocol}://${import.meta.env.VITE_API_ENDPOINT || 'localhost:8001'}`;
+type TManualSignalType = 'offer' | 'answer';
+
+type TManualSignalEnvelope = {
+  kind: 'p2p-mcp';
+  version: 1;
+  signal: TManualSignalType;
+  sdp: string;
+  type?: RTCSdpType;
+  senderRole: TMcpRole;
+  senderName: string;
+  senderPeerId: string;
+};
+
+const toBase64Url = (value: string) => {
+  const bytes = new TextEncoder().encode(value);
+  let binary = '';
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+};
+
+const fromBase64Url = (value: string) => {
+  const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = normalized + '='.repeat((4 - (normalized.length % 4)) % 4);
+  const binary = atob(padded);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+  return new TextDecoder().decode(bytes);
+};
+
+const encodeSignal = (envelope: TManualSignalEnvelope) => {
+  const raw = JSON.stringify(envelope);
+  return `mcpwebrtc:${toBase64Url(raw)}`;
+};
+
+const decodeSignal = (raw: string): TManualSignalEnvelope => {
+  const trimmed = raw.trim();
+  const payload = trimmed.startsWith('mcpwebrtc:') ? trimmed.slice('mcpwebrtc:'.length) : trimmed;
+  const decoded = JSON.parse(fromBase64Url(payload)) as TManualSignalEnvelope;
+
+  if (decoded.kind !== 'p2p-mcp' || decoded.version !== 1) {
+    throw new Error('Unsupported signal payload');
+  }
+
+  if (!decoded.sdp || !decoded.signal) {
+    throw new Error('Malformed signal payload');
+  }
+
+  return decoded;
 };
 
 const clampTimeline = (events: TMcpTimelineEvent[]) => events.slice(-MAX_TIMELINE_ENTRIES);
 
 export const usePeerMcp = () => {
-  const { createMcpSession, getMcpSession } = useService();
   const localPeerId = useMemo(() => uuidv4().slice(0, 8), []);
   const [role, setRole] = useState<TMcpRole>('provider');
   const [peerName, setPeerName] = useState('Edge Gateway');
-  const [sessionInput, setSessionInput] = useState('');
-  const [session, setSession] = useState<TMcpSessionResponse | null>(null);
-  const [remotePeers, setRemotePeers] = useState<TMcpPeer[]>([]);
+  const [signalInput, setSignalInput] = useState('');
+  const [latestSignalText, setLatestSignalText] = useState('');
   const [remoteTools, setRemoteTools] = useState<TMcpTool[]>([]);
   const [selectedTool, setSelectedTool] = useState(LOCAL_MCP_TOOLS[0].name);
   const [parametersText, setParametersText] = useState(TOOL_PARAMETER_MAP[LOCAL_MCP_TOOLS[0].name]);
@@ -70,10 +117,9 @@ export const usePeerMcp = () => {
   const [webrtcState, setWebrtcState] = useState('idle');
   const [channelState, setChannelState] = useState<'idle' | 'opening' | 'open' | 'closed'>('idle');
   const [isBusy, setIsBusy] = useState(false);
+
   const clientRef = useRef<P2PMcpClient | null>(null);
   const peerNameRef = useRef(peerName);
-  const sessionIdRef = useRef(session?.session_id || '');
-  const remotePeerCountRef = useRef(remotePeers.length);
   const selectedToolRef = useRef(selectedTool);
 
   const appendTimeline = useCallback((event: TMcpTimelineEvent) => {
@@ -82,26 +128,21 @@ export const usePeerMcp = () => {
 
   useEffect(() => {
     peerNameRef.current = peerName;
-    sessionIdRef.current = session?.session_id || '';
-    remotePeerCountRef.current = remotePeers.length;
     selectedToolRef.current = selectedTool;
-  }, [peerName, remotePeers.length, selectedTool, session?.session_id]);
+  }, [peerName, selectedTool]);
 
   const getProviderResult = useCallback((toolName: string, parameters: Record<string, unknown>) => {
     const activePeerName = peerNameRef.current;
-    const activeSessionId = sessionIdRef.current;
-    const activePeerCount = remotePeerCountRef.current + 1;
     const deviceId = String(parameters.device_id || 'edge-gateway-01');
 
     switch (toolName) {
       case 'get_device_status':
         return {
           device_id: deviceId,
-          session_id: activeSessionId,
           peer: activePeerName,
           transport: 'webrtc-datachannel',
           status: 'healthy',
-          active_peers: activePeerCount,
+          active_peers: 2,
           last_seen: new Date().toISOString()
         };
       case 'get_recent_logs':
@@ -152,10 +193,9 @@ export const usePeerMcp = () => {
     setParametersText(JSON.stringify(activeTool.parameters, null, 2));
   }, []);
 
-  const buildClient = useCallback(
+  const createClient = useCallback(
     (nextRole: TMcpRole) =>
       new P2PMcpClient({
-        signalingBaseUrl: getSocketBaseUrl(),
         identity: {
           peerId: localPeerId,
           peerName: peerNameRef.current.trim() || (nextRole === 'provider' ? 'Edge Gateway' : 'AI Client'),
@@ -167,27 +207,6 @@ export const usePeerMcp = () => {
           setSignalingState(state.signalingState);
           setWebrtcState(state.webrtcState);
           setChannelState(state.channelState);
-        },
-        onPeerSnapshot: (snapshot) => {
-          const peers = snapshot.peers.filter((peer) => peer.peer_id !== localPeerId);
-          setSession((previous) =>
-            previous
-              ? {
-                  ...previous,
-                  peer_count: snapshot.peer_count,
-                  peers: snapshot.peers
-                }
-              : null
-          );
-          setRemotePeers(peers);
-
-          const providerPeer = peers.find((peer) => peer.role === 'provider');
-          if (nextRole === 'client') {
-            setRemoteTools(providerPeer?.tools || []);
-            if (providerPeer?.tools?.length) {
-              syncSelectedTool(providerPeer.tools);
-            }
-          }
         },
         onTimelineEvent: appendTimeline,
         onToolCatalog: (message) => {
@@ -202,27 +221,6 @@ export const usePeerMcp = () => {
   );
 
   useEffect(() => {
-    if (!session?.session_id) {
-      return;
-    }
-
-    const client = buildClient(role);
-    clientRef.current = client;
-    void client.connect(session.session_id);
-
-    return () => {
-      client.disconnect();
-      if (clientRef.current === client) {
-        clientRef.current = null;
-      }
-    };
-  }, [buildClient, role, session?.session_id]);
-
-  useEffect(() => {
-    if (role === 'provider') {
-      setRemoteTools(LOCAL_MCP_TOOLS);
-    }
-
     clientRef.current?.updateIdentity({
       peerName,
       role,
@@ -232,7 +230,6 @@ export const usePeerMcp = () => {
 
   useEffect(() => {
     if (role === 'provider') {
-      setRemoteTools(LOCAL_MCP_TOOLS);
       return;
     }
 
@@ -243,52 +240,120 @@ export const usePeerMcp = () => {
     }
   }, [remoteTools, role, selectedTool]);
 
-  const startProviderSession = useCallback(async () => {
+  const generateProviderOffer = useCallback(async () => {
     setIsBusy(true);
     setTimeline([]);
     setLastResult('');
+    setRole('provider');
+    setRemoteTools([]);
     resetClient();
-    const nextSession = await createMcpSession();
-    if (nextSession) {
-      setRole('provider');
-      setSession(nextSession);
-      setSessionInput(nextSession.session_id);
-      setRemotePeers([]);
-      setRemoteTools(LOCAL_MCP_TOOLS);
-      toast.success('Provider session created');
-    } else {
-      toast.error('Unable to create an MCP session');
-    }
-    setIsBusy(false);
-  }, [createMcpSession, resetClient]);
 
-  const joinClientSession = useCallback(async () => {
-    if (!sessionInput.trim()) {
-      toast.error('Enter a session code first');
+    try {
+      const client = createClient('provider');
+      clientRef.current = client;
+      const offer = await client.createManualOffer();
+      const signal = encodeSignal({
+        kind: 'p2p-mcp',
+        version: 1,
+        signal: 'offer',
+        sdp: offer.sdp,
+        type: offer.type,
+        senderRole: 'provider',
+        senderName: peerNameRef.current,
+        senderPeerId: localPeerId
+      });
+      setLatestSignalText(signal);
+      setSignalInput(signal);
+      toast.success('Provider offer generated. Share it with the client peer.');
+    } catch (error) {
+      console.error(error);
+      resetClient();
+      toast.error(error instanceof Error ? error.message : 'Unable to create provider offer');
+    }
+
+    setIsBusy(false);
+  }, [createClient, localPeerId, resetClient]);
+
+  const applySignalAsOffer = useCallback(async () => {
+    if (!signalInput.trim()) {
+      toast.error('Paste a provider offer payload first');
       return;
     }
 
     setIsBusy(true);
     setTimeline([]);
     setLastResult('');
+    setRole('client');
+    setRemoteTools([]);
     resetClient();
-    const existingSession = await getMcpSession(sessionInput.trim());
-    if (existingSession) {
-      setRole('client');
-      setPeerName((current) => current || 'AI Client');
-      setSession(existingSession);
-      setRemotePeers(existingSession.peers.filter((peer) => peer.peer_id !== localPeerId));
-      const providerPeer = existingSession.peers.find((peer) => peer.role === 'provider');
-      setRemoteTools(providerPeer?.tools || []);
-      if (providerPeer?.tools?.length) {
-        syncSelectedTool(providerPeer.tools);
+
+    try {
+      const decoded = decodeSignal(signalInput);
+      if (decoded.signal !== 'offer') {
+        throw new Error('Expected an offer payload');
       }
-      toast.success('Joined signaling session');
-    } else {
-      toast.error('Session not found');
+
+      const client = createClient('client');
+      clientRef.current = client;
+      const answer = await client.createManualAnswer({
+        sdp: decoded.sdp,
+        type: decoded.type || 'offer'
+      });
+
+      const responseSignal = encodeSignal({
+        kind: 'p2p-mcp',
+        version: 1,
+        signal: 'answer',
+        sdp: answer.sdp,
+        type: answer.type,
+        senderRole: 'client',
+        senderName: peerNameRef.current,
+        senderPeerId: localPeerId
+      });
+
+      setLatestSignalText(responseSignal);
+      setSignalInput(responseSignal);
+      toast.success('Answer created. Send it back to the provider peer.');
+    } catch (error) {
+      console.error(error);
+      resetClient();
+      toast.error(error instanceof Error ? error.message : 'Could not apply offer payload');
     }
+
     setIsBusy(false);
-  }, [getMcpSession, localPeerId, resetClient, sessionInput, syncSelectedTool]);
+  }, [createClient, localPeerId, resetClient, signalInput]);
+
+  const applySignalAsAnswer = useCallback(async () => {
+    if (!signalInput.trim()) {
+      toast.error('Paste a client answer payload first');
+      return;
+    }
+
+    if (!clientRef.current || role !== 'provider') {
+      toast.error('Generate provider offer first');
+      return;
+    }
+
+    setIsBusy(true);
+
+    try {
+      const decoded = decodeSignal(signalInput);
+      if (decoded.signal !== 'answer') {
+        throw new Error('Expected an answer payload');
+      }
+
+      await clientRef.current.applyManualAnswer({
+        sdp: decoded.sdp,
+        type: decoded.type || 'answer'
+      });
+      toast.success('Answer applied. Waiting for data channel to open.');
+    } catch (error) {
+      console.error(error);
+      toast.error(error instanceof Error ? error.message : 'Could not apply answer payload');
+    }
+
+    setIsBusy(false);
+  }, [role, signalInput]);
 
   const invokeTool = useCallback(() => {
     try {
@@ -300,52 +365,53 @@ export const usePeerMcp = () => {
     }
   }, [parametersText, selectedTool]);
 
-  const copySessionCode = useCallback(async () => {
-    if (!session?.session_id) {
+  const copyLatestSignalText = useCallback(async () => {
+    if (!latestSignalText) {
+      toast.error('No signal payload available yet');
       return;
     }
 
     try {
-      await navigator.clipboard.writeText(session.session_id);
-      toast.success('Session code copied');
+      await navigator.clipboard.writeText(latestSignalText);
+      toast.success('Signal payload copied');
     } catch (error) {
       toast.error('Clipboard access is not available');
     }
-  }, [session?.session_id]);
+  }, [latestSignalText]);
 
   const closeSession = useCallback(() => {
     resetClient();
-    setSession(null);
-    setRemotePeers([]);
-    setRemoteTools(role === 'provider' ? LOCAL_MCP_TOOLS : []);
+    setRemoteTools([]);
     setTimeline([]);
     setLastResult('');
+    setLatestSignalText('');
+    setSignalInput('');
     toast.info('Session cleared');
-  }, [resetClient, role]);
+  }, [resetClient]);
 
   return {
+    applySignalAsAnswer,
+    applySignalAsOffer,
     channelState,
     closeSession,
-    copySessionCode,
+    copyLatestSignalText,
+    generateProviderOffer,
     invokeTool,
     isBusy,
-    joinClientSession,
     lastResult,
+    latestSignalText,
     localPeerId,
     parametersText,
     peerName,
-    remotePeers,
     remoteTools,
     role,
     selectedTool,
-    session,
-    sessionInput,
     setParametersText,
     setPeerName,
     setSelectedTool,
-    setSessionInput,
+    setSignalInput,
+    signalInput,
     signalingState,
-    startProviderSession,
     timeline,
     tools: LOCAL_MCP_TOOLS,
     webrtcState

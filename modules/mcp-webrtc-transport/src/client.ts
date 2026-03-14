@@ -29,7 +29,7 @@ const createTimelineEvent = (
 });
 
 export class P2PMcpClient {
-  private readonly signalingBaseUrl: string;
+  private readonly signalingBaseUrl?: string;
   private readonly rtcConfiguration?: RTCConfiguration;
   private readonly onConnectionStateChange?: TMcpClientOptions['onConnectionStateChange'];
   private readonly onPeerSnapshot?: TMcpClientOptions['onPeerSnapshot'];
@@ -86,6 +86,10 @@ export class P2PMcpClient {
   async connect(sessionId: string) {
     if (!sessionId) {
       throw new Error('sessionId is required');
+    }
+
+    if (!this.signalingBaseUrl) {
+      throw new Error('signalingBaseUrl is required for websocket signaling mode');
     }
 
     this.disconnect();
@@ -154,6 +158,72 @@ export class P2PMcpClient {
     return requestId;
   }
 
+  
+  async createManualOffer() {
+    this.disconnectPeerConnection();
+    this.updateConnectionState({ signalingState: 'ready' });
+    this.publishTimeline('system', 'Manual signaling', 'Created local provider offer without backend signaling');
+
+    const connection = this.createPeerConnection('', true, false);
+    const offer = await connection.createOffer();
+    await connection.setLocalDescription(offer);
+    await this.waitForIceGatheringComplete(connection);
+
+    const localDescription = connection.localDescription;
+    if (!localDescription?.sdp) {
+      throw new Error('Failed to create manual offer');
+    }
+
+    return {
+      type: localDescription.type,
+      sdp: localDescription.sdp
+    };
+  }
+
+  async createManualAnswer(offer: { sdp: string; type?: RTCSdpType }) {
+    this.disconnectPeerConnection();
+    this.updateConnectionState({ signalingState: 'ready' });
+    this.publishTimeline('inbound', 'Manual offer received', 'Applying offer payload pasted from the provider peer');
+
+    const connection = this.createPeerConnection('', false, false);
+    await connection.setRemoteDescription(
+      new RTCSessionDescription({
+        type: offer.type || 'offer',
+        sdp: offer.sdp
+      })
+    );
+
+    const answer = await connection.createAnswer();
+    await connection.setLocalDescription(answer);
+    await this.waitForIceGatheringComplete(connection);
+
+    const localDescription = connection.localDescription;
+    if (!localDescription?.sdp) {
+      throw new Error('Failed to create manual answer');
+    }
+
+    return {
+      type: localDescription.type,
+      sdp: localDescription.sdp
+    };
+  }
+
+  async applyManualAnswer(answer: { sdp: string; type?: RTCSdpType }) {
+    if (!this.peerConnection) {
+      throw new Error('No pending offer exists. Create an offer first.');
+    }
+
+    await this.peerConnection.setRemoteDescription(
+      new RTCSessionDescription({
+        type: answer.type || 'answer',
+        sdp: answer.sdp
+      })
+    );
+
+    await this.applyQueuedIceCandidates();
+    this.publishTimeline('inbound', 'Manual answer applied', 'Provider applied answer payload and is waiting for data channel open');
+  }
+
   private publishPeerPresence() {
     this.websocket?.send(
       JSON.stringify({
@@ -216,7 +286,23 @@ export class P2PMcpClient {
     };
   }
 
-  private createPeerConnection(targetPeerId: string, shouldCreateDataChannel: boolean) {
+  private async waitForIceGatheringComplete(connection: RTCPeerConnection) {
+    if (connection.iceGatheringState === 'complete') {
+      return;
+    }
+
+    await new Promise<void>((resolve) => {
+      const listener = () => {
+        if (connection.iceGatheringState === 'complete') {
+          connection.removeEventListener('icegatheringstatechange', listener);
+          resolve();
+        }
+      };
+      connection.addEventListener('icegatheringstatechange', listener);
+    });
+  }
+
+  private createPeerConnection(targetPeerId: string, shouldCreateDataChannel: boolean, shouldRelayIce = true) {
     const connection = new RTCPeerConnection(this.rtcConfiguration);
     this.peerConnection = connection;
     this.updateConnectionState({ webrtcState: 'negotiating' });
@@ -226,7 +312,7 @@ export class P2PMcpClient {
     };
 
     connection.onicecandidate = (event) => {
-      if (event.candidate) {
+      if (event.candidate && shouldRelayIce && targetPeerId) {
         this.sendSignalMessage(targetPeerId, 'ice', {
           candidate: event.candidate.toJSON()
         });
